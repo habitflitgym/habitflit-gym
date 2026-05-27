@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#10b981" />
+  <meta name="description" content="Entrenador de fitness adaptat a tota edat amb sensor postural IA" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HABITFIT" />
+  <link rel="manifest" href="https://habitflitgym.github.io/habitflit-gym/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230a0a1a' width='192' height='192'/><text x='96' y='120' font-size='80' font-family='Arial' text-anchor='middle' fill='%2310b981' dominant-baseline='middle'>💪</text></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230a0a1a' width='192' height='192' rx='45'/><text x='96' y='120' font-size='80' font-family='Arial' text-anchor='middle' fill='%2310b981' dominant-baseline='middle'>💪</text></svg>" />
+  <title>🏋️ HABITFIT · Entrenador Adaptatiu per a Totes les Edats</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.0/dist/pose-detection.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+    body {
+      background: radial-gradient(circle at 10% 20%, #0a0f1e, #0a0a1a);
+      color: white;
+      min-height: 100vh;
+    }
+    .glass {
+      background: rgba(10, 20, 30, 0.65);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .tab-active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border-bottom: 2px solid #10b981;
+    }
+    .tab-inactive {
+      background: rgba(30, 41, 59, 0.7);
+      color: #94a3b8;
+    }
+    .btn-premium { background: linear-gradient(135deg, #10b981, #059669, #06b6d4); background-size: 200%; transition: all 0.3s; }
+    .btn-premium:hover { background-position: 100%; transform: translateY(-2px); box-shadow: 0 15px 30px -10px #10b981; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.6} }
+    #cameraPreview, #poseCanvas { transform: scaleX(-1); }
+    .posture-led-good { background: #10b981; box-shadow: 0 0 12px #10b981; }
+    .posture-led-bad { background: #ef4444; animation: pulse 0.8s infinite; }
+    .posture-led-warning { background: #eab308; }
+  </style>
+</head>
+<body class="p-4 md:p-6">
+
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-5">
+      <div class="inline-flex items-center gap-3 bg-black/30 backdrop-blur rounded-full px-6 py-3 shadow-lg">
+        <span class="text-4xl animate-pulse">🏋️</span>
+        <span class="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">HABITFIT</span>
+        <span class="text-4xl animate-pulse">💪</span>
+      </div>
+      <p class="text-slate-400 text-sm mt-2">Entrenament adaptat a la teva edat i condició física · Sense riscos</p>
+    </div>
+
+    <!-- PESTANYES -->
+    <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <button onclick="canviarTab('entrenament')" id="tabEntrenament" class="tab-active px-5 py-3 rounded-xl font-bold transition">🏋️ ENTRENAMENT ADAPTATIU</button>
+      <button onclick="canviarTab('camara')" id="tabCamara" class="tab-inactive px-5 py-3 rounded-xl font-bold transition">📷 SENSOR POSTURAL</button>
+      <button onclick="canviarTab('alimentacio')" id="tabAlimentacio" class="tab-inactive px-5 py-3 rounded-xl font-bold transition">🍎 ALIMENTACIÓ · IA</button>
+    </div>
+
+    <!-- PESTANYA 1: ENTRENAMENT ADAPTATIU -->
+    <div id="panelEntrenament" class="transition-all">
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div class="glass rounded-3xl p-6">
+          <h2 class="text-2xl font-bold mb-4">📋 Configura el teu perfil</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <input id="edad" type="number" placeholder="📅 Edat" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
+            <select id="genero" class="p-3 rounded-xl bg-slate-800/90"><option>Masculí</option><option>Femení</option></select>
+            <input id="peso" type="number" placeholder="⚖️ Pes (kg)" class="p-3 rounded-xl bg-slate-800/90" />
+            <input id="altura" type="number" placeholder="📏 Alçada (cm)" class="p-3 rounded-xl bg-slate-800/90" />
+            <select id="somatotipo" class="p-3 rounded-xl bg-slate-800/90"><option>Ectomorf</option><option>Mesomorf</option><option>Endomorf</option></select>
+            <select id="nivel" class="p-3 rounded-xl bg-slate-800/90"><option>Principiant (edat avançada)</option><option>Principiant</option><option>Intermedi</option><option>Avançat</option></select>
+            <select id="objetivo" class="p-3 rounded-xl bg-slate-800/90"><option>Mobilitat i salut</option><option>Perdre greix suau</option><option>Guanyar força funcional</option><option>Resistència</option></select>
+            <input id="minutos" type="number" placeholder="⏱️ Minuts (20-45)" value="30" class="p-3 rounded-xl bg-slate-800/90" />
+            <input id="lesiones" type="text" placeholder="🩺 Lesions (espatlla, genoll, esquena...)" class="col-span-2 p-3 rounded-xl bg-slate-800/90" />
+            <div class="col-span-2 flex gap-3 mt-2"><label><input type="checkbox" id="sonidoActivado" checked /> 🔊 So</label><label><input type="checkbox" id="timerActivado" checked /> ⏲️ Timer</label></div>
+          </div>
+          <button onclick="generarPlanEntrenament()" class="btn-premium w-full mt-5 p-3 rounded-xl font-bold">🔄 GENERAR RUTINA ADAPTADA</button>
+          <button onclick="descargarHTML()" class="w-full mt-3 bg-slate-700 hover:bg-slate-600 p-2 rounded-xl text-sm transition">💾 Descarregar App</button>
+        </div>
+        <div class="glass rounded-3xl p-6 flex flex-col items-center justify-center text-center">
+          <div class="text-6xl mb-3">👴👵🤖</div>
+          <h2 class="text-xl font-bold">Entrenador per a Totes les Edats</h2>
+          <p class="text-slate-300 text-sm mt-2">Exercicis segurs, sense impacte, adaptats a persones grans i amb lesions. Cada vegada que generes una rutina, els exercicis canvien.</p>
+        </div>
+      </div>
+      <div id="resultadoEntrenament" class="glass rounded-3xl p-5 mt-6 max-h-[55vh] overflow-auto">
+        <div class="text-center text-slate-400 py-10">✨ Selecciona la teva edat i clica "GENERAR RUTINA" ✨</div>
+      </div>
+    </div>
+
+    <!-- PESTANYA 2: CÀMERA POSTURAL -->
+    <div id="panelCamara" class="hidden transition-all">
+      <div class="glass rounded-3xl p-6">
+        <h2 class="text-2xl font-bold mb-3">📷 Sensor de Moviment · Correcció Postural IA</h2>
+        <p class="text-slate-300 mb-4 text-sm">Activa la càmera per analitzar la teva postura en temps real. L'IA detecta desviacions de cap i espatlles.</p>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="bg-black/50 rounded-2xl p-4">
+            <div class="relative aspect-video bg-slate-900 rounded-xl overflow-hidden">
+              <video id="cameraPreview" class="w-full h-full object-cover" autoplay playsinline muted></video>
+              <canvas id="poseCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+            </div>
+            <div class="flex gap-3 mt-4">
+              <button id="startCameraBtn" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl font-bold flex-1">🎥 INICIAR CÀMERA</button>
+              <button id="stopCameraBtn" class="bg-red-600/70 hover:bg-red-500 px-4 py-2 rounded-xl font-bold flex-1">⏹️ ATURAR</button>
+            </div>
+            <p class="text-xs text-center text-slate-400 mt-2">🔍 Permet l'accés a la càmera · Detecta esquelet i postura</p>
+          </div>
+          <div class="bg-slate-800/60 rounded-2xl p-5">
+            <h3 class="text-xl font-bold text-emerald-400 mb-3">🩺 ANÀLISI POSTURAL</h3>
+            <div id="postureStatus" class="p-4 bg-slate-900/80 rounded-xl mb-4">
+              <div class="flex items-center gap-3"><div id="postureLed" class="w-4 h-4 rounded-full bg-gray-500"></div><span id="postureMessage" class="font-semibold">Esperant càmera...</span></div>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between p-2 bg-slate-700/50 rounded-lg"><span>🧠 Posició del cap:</span><span id="headStatus" class="font-bold text-amber-300">—</span></div>
+              <div class="flex justify-between p-2 bg-slate-700/50 rounded-lg"><span>🦾 Alineació espatlles:</span><span id="shouldersStatus" class="font-bold text-amber-300">—</span></div>
+              <div class="flex justify-between p-2 bg-slate-700/50 rounded-lg"><span>📐 Postura general:</span><span id="generalStatus" class="font-bold text-amber-300">—</span></div>
+            </div>
+            <div class="mt-4 p-2 bg-emerald-900/30 rounded-lg text-xs">💡 Mantén l'esquena recta i espatlles enrere. El sistema t'alertarà si detecta mala postura.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTANYA 3: ALIMENTACIÓ IA -->
+    <div id="panelAlimentacio" class="hidden transition-all">
+      <div class="glass rounded-3xl p-6">
+        <h2 class="text-2xl font-bold mb-4">🍎 Assistent Nutricional · IA Personalitzada</h2>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="bg-slate-800/50 p-5 rounded-2xl">
+            <h3 class="font-bold text-cyan-300 mb-3">📝 Les teves dades</h3>
+            <div class="space-y-3">
+              <input type="number" id="nutPeso" placeholder="⚖️ Pes actual (kg)" class="w-full p-3 rounded-xl bg-slate-700/80" />
+              <input type="number" id="nutAltura" placeholder="📏 Alçada (cm)" class="w-full p-3 rounded-xl bg-slate-700/80" />
+              <input type="number" id="nutEdad" placeholder="🎂 Edat" class="w-full p-3 rounded-xl bg-slate-700/80" />
+              <select id="nutSomatotipo" class="w-full p-3 rounded-xl bg-slate-700/80">
+                <option value="Ectomorf">Ectomorf (metabolisme ràpid)</option>
+                <option value="Mesomorf">Mesomorf (naturalment atlètic)</option>
+                <option value="Endomorf">Endomorf (tendència a acumular greix)</option>
+              </select>
+              <select id="nutActividad" class="w-full p-3 rounded-xl bg-slate-700/80">
+                <option value="1.2">Sedentari</option>
+                <option value="1.375">Lleugerament actiu</option>
+                <option value="1.55">Moderadament actiu</option>
+                <option value="1.725">Molt actiu</option>
+              </select>
+              <select id="nutObjetivo" class="w-full p-3 rounded-xl bg-slate-700/80">
+                <option value="perdre">Perdre greix saludable</option>
+                <option value="mantenir">Mantenir pes i salut</option>
+                <option value="definir">Millorar composició corporal</option>
+              </select>
+              <select id="nutDieta" class="w-full p-3 rounded-xl bg-slate-700/80">
+                <option>Omnívora</option><option>Vegetariana</option><option>Vegana</option>
+              </select>
+              <input type="text" id="nutAlergias" placeholder="🥜 Al·lèrgies" class="w-full p-3 rounded-xl bg-slate-700/80" />
+            </div>
+            <button onclick="generarPlanNutricional()" class="btn-premium w-full mt-5 p-3 rounded-xl font-bold">🍽️ GENERAR PLA NUTRICIONAL</button>
+          </div>
+          <div class="bg-slate-800/50 p-5 rounded-2xl">
+            <h3 class="font-bold text-emerald-300 mb-3">📊 PLA NUTRICIONAL IA</h3>
+            <div id="nutResultado" class="space-y-3 text-sm overflow-y-auto max-h-[500px]">
+              <div class="text-center text-slate-400 p-5">Completa el formulari per rebre el teu pla personalitzat.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TIMER -->
+  <div id="modalTimer" class="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 hidden">
+    <div class="bg-slate-800 p-8 rounded-3xl text-center max-w-md w-full border-2 border-emerald-500">
+      <div class="text-8xl mb-3" id="modalAnimacio">🧘</div>
+      <h3 class="text-2xl font-bold" id="modalExerciciNom">Exercici</h3>
+      <div class="relative w-48 h-48 mx-auto my-4"><svg class="w-full h-full transform -rotate-90"><circle cx="96" cy="96" r="88" stroke="#1e293b" stroke-width="8" fill="none" /><circle id="timerCircle" cx="96" cy="96" r="88" stroke="#10b981" stroke-width="8" fill="none" stroke-dasharray="553" stroke-dashoffset="0" /></svg><div class="absolute inset-0 flex items-center justify-center"><span id="timerSegons" class="text-6xl font-bold text-emerald-400">00</span></div></div>
+      <div class="flex gap-3 mt-4"><button onclick="tancarModalTimer()" class="flex-1 bg-red-500/80 py-2 rounded-xl">Tancar</button><button onclick="pausarTimer()" class="flex-1 bg-yellow-500/80 py-2 rounded-xl">Pausa</button></div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== REGISTRAR SERVICE WORKER ====================
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('https://habitflitgym.github.io/habitflit-gym/service-worker.js')
+          .then(registration => {
+            console.log('✅ Service Worker registrat:', registration);
+          })
+          .catch(error => {
+            console.log('Service Worker error:', error);
+          });
+      });
+    }
+
+    // ==================== VARIABLES GLOBALS ====================
+    let timerInterval = null, tempsRestant = 0, timerPausat = false, duradaTotalSegons = 0;
+    let poseDetector = null, animationId = null, cameraStream = null;
+    const videoElem = document.getElementById('cameraPreview');
+    const canvasElem = document.getElementById('poseCanvas');
+    let canvasCtx = null;
+    
+    // ==================== BASE DE DADES D'EXERCICIS SEGURS (ROTATÒRIA) ====================
+    // Exercicis adaptats per a persones grans i amb lesions - sense impacte, segurs
+    const exercicisSegurs = [
+      {nom: 'Caminada al lloc (escalfament)', series: '1x3min', tempsSec: 30, descans: 10, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Elevació de braços assegut', series: '2x12', tempsSec: 35, descans: 20, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Rotació de turmells assegut', series: '2x10', tempsSec: 30, descans: 15, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Inclinació lateral del coll', series: '2x8', tempsSec: 25, descans: 15, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Obertura de braços (pit)', series: '2x12', tempsSec: 30, descans: 20, tipus: 'força suau', impacte: 'baix'},
+      {nom: 'Assegut a aixecament de talons', series: '2x15', tempsSec: 30, descans: 15, tipus: 'força suau', impacte: 'baix'},
+      {nom: 'Flexió de genolls assegut', series: '2x12', tempsSec: 30, descans: 20, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Respiració profunda (relaxació)', series: '1x1min', tempsSec: 20, descans: 10, tipus: 'respiració', impacte: 'baix'},
+      {nom: 'Gir de tronc assegut', series: '2x10', tempsSec: 30, descans: 20, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Estirament d\'esquena a la paret', series: '2x20s', tempsSec: 20, descans: 15, tipus: 'estirament', impacte: 'baix'},
+      {nom: 'Moviment de coll (dalt/baix)', series: '2x10', tempsSec: 25, descans: 15, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Círculs amb els braços (petits)', series: '2x12', tempsSec: 30, descans: 20, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Pujar genolls assegut', series: '2x10', tempsSec: 30, descans: 15, tipus: 'força suau', impacte: 'baix'},
+      {nom: 'Inclinació de pelvis assegut', series: '2x12', tempsSec: 30, descans: 15, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Estirament d\'isquiotibials assegut', series: '2x20s', tempsSec: 20, descans: 15, tipus: 'estirament', impacte: 'baix'},
+      {nom: 'Rotació de canells', series: '2x15', tempsSec: 25, descans: 15, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Moviment d\'espatlles (encongir)', series: '2x12', tempsSec: 25, descans: 15, tipus: 'mobilitat', impacte: 'baix'},
+      {nom: 'Aixecament de braços laterals', series: '2x10', tempsSec: 30, descans: 20, tipus: 'força suau', impacte: 'baix'},
+      {nom: 'Flexió d\'avantbraços (bíceps suau)', series: '2x10', tempsSec: 30, descans: 20, tipus: 'força suau', impacte: 'baix'},
+      {nom: 'Estirament de quàdriceps assegut', series: '2x15s', tempsSec: 15, descans: 15, tipus: 'estirament', impacte: 'baix'},
+      {nom: 'Caminada lateral (pas a pas)', series: '2x10', tempsSec: 35, descans: 20, tipus: 'equilibri', impacte: 'baix'},
+      {nom: 'Suport de talons i puntes', series: '2x12', tempsSec: 30, descans: 15, tipus: 'equilibri', impacte: 'baix'},
+      {nom: 'Rotació de maluc assegut', series: '2x10', tempsSec: 30, descans: 20, tipus: 'mobilitat', impacte: 'baix'}
+    ];
+    
+    // Funció per barrejar array (Fisher-Yates)
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+    
+    // Detectar si és una persona gran (>60 anys) per adaptar encara més
+    function esPersonaGran(edad) {
+      return edad && edad >= 60;
+    }
+    
+    function generarPlanEntrenament() {
+      const edad = parseInt(document.getElementById('edad').value) || 50;
+      const nivel = document.getElementById('nivel').value;
+      const objetivo = document.getElementById('objetivo').value;
+      const minutosSessio = parseInt(document.getElementById('minutos').value) || 30;
+      const lesiones = document.getElementById('lesiones').value;
+      const esGran = esPersonaGran(edad);
+      
+      // Filtrar exercicis segons lesions (si hi ha lesió d'espatlla, eliminar exercicis de braços)
+      let exercicisDisponibles = [...exercicisSegurs];
+      if(lesiones && (lesiones.toLowerCase().includes('espatlla') || lesiones.toLowerCase().includes('braç') || lesiones.toLowerCase().includes('colze'))) {
+        exercicisDisponibles = exercicisDisponibles.filter(ex => 
+          !ex.nom.includes('braços') && !ex.nom.includes('espatlles') && !ex.nom.includes('bíceps')
+        );
+      }
+      if(lesiones && (lesiones.toLowerCase().includes('genoll') || lesiones.toLowerCase().includes('cama'))) {
+        exercicisDisponibles = exercicisDisponibles.filter(ex => 
+          !ex.nom.includes('genolls') && !ex.nom.includes('talons') && !ex.nom.includes('quàdriceps')
+        );
+      }
+      
+      // Barrejar per obtenir varietat cada vegada
+      exercicisDisponibles = shuffleArray(exercicisDisponibles);
+      
+      // Seleccionar 4-5 exercicis
+      let numExercicis = esGran ? 4 : (nivel === 'Avançat' ? 6 : 5);
+      let rutina = exercicisDisponibles.slice(0, numExercicis);
+      
+      // Si té més de 70 anys, reduir temps
+      if(edad >= 70) {
+        rutina = rutina.map(ex => ({...ex, tempsSec: Math.max(ex.tempsSec - 5, 15), descans: ex.descans + 5}));
+      }
+      
+      // Missatge d'adaptació per edat
+      let missatgeEdat = "";
+      if(esGran) {
+        missatgeEdat = "👴 Rutina especialment adaptada per a persones grans. Moviments suaus, sense impacte. Realitza els exercicis assegut/plat si ho necessites.";
+      } else if(edad >= 50) {
+        missatgeEdat = "👨🦳 Rutina adaptada per a adults de 50+. Prioritzem mobilitat i força funcional sense risc.";
+      }
+      
+      let html = `<div class="space-y-4">
+        <div class="bg-emerald-900/40 p-4 rounded-2xl text-center">
+          <h2 class="text-2xl font-bold">RUTINA ADAPTADA · ${nivel}</h2>
+          <div class="flex gap-2 justify-center mt-2 flex-wrap">
+            <span class="bg-black/50 px-3 py-1 rounded-full text-xs">🎯 ${objetivo}</span>
+            <span class="bg-black/50 px-3 py-1 rounded-full text-xs">⏱️ ${minutosSessio} min</span>
+            <span class="bg-black/50 px-3 py-1 rounded-full text-xs">📅 Edat: ${edad} anys</span>
+          </div>
+          ${missatgeEdat ? `<p class="text-amber-300 text-xs mt-2">${missatgeEdat}</p>` : ''}
+          ${lesiones ? `<p class="text-red-300 text-xs mt-1">⚠️ Lesió detectada: ${lesiones}. Exercicis modificats.</p>` : ''}
+        </div>
+        <div class="bg-slate-800/40 p-3 rounded-xl">
+          <p class="text-sm text-cyan-300 font-bold">📌 RECOMANACIONS IMPORTANTS:</p>
+          <ul class="text-xs text-slate-300 list-disc pl-4 mt-1 space-y-1">
+            <li>Realitza els exercicis a un ritme còmode, sense dolor</li>
+            <li>Pots fer-los assegut/a si et sents més segur/a</li>
+            <li>Respira profundament durant els moviments</li>
+            <li>Si tens mareig o dolor, atura't immediatament</li>
+            <li>Mantén una ampolla d'aigua a prop</li>
+          </ul>
+        </div>
+        <div class="space-y-3">`;
+      
+      for(let i = 0; i < rutina.length; i++) {
+        const ex = rutina[i];
+        const tempsAdaptat = ex.tempsSec;
+        html += `<div class="bg-slate-800/50 rounded-xl p-4 flex justify-between items-center hover:bg-slate-700/50 transition">
+          <div>
+            <h4 class="font-bold text-lg">🧘 ${ex.nom}</h4>
+            <div class="flex gap-3 text-xs mt-1">
+              <span class="bg-emerald-900/60 px-2 py-0.5 rounded-full">📊 ${ex.series}</span>
+              <span class="bg-cyan-900/60 px-2 py-0.5 rounded-full">⏱️ ${tempsAdaptat}s treball</span>
+              <span class="bg-amber-900/60 px-2 py-0.5 rounded-full">💪 ${ex.descans}s descans</span>
+            </div>
+          </div>
+          <button onclick="mostrarModalTimer(${tempsAdaptat}, '${ex.nom.replace(/'/g, "\\'")}')" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-sm font-bold">⏲️ Timer</button>
+        </div>`;
+      }
+      
+      html += `</div>
+        <div class="bg-amber-900/30 p-4 rounded-xl text-sm text-center">
+          <p class="font-bold">🌸 Consell del dia:</p>
+          <p>${esGran ? "Recorda fer una petita caminada després de l'entrenament. La constància és més important que la intensitat." : "Escolta el teu cos i progressa a poc a poc. La tècnica és més important que la velocitat."}</p>
+          <p class="text-xs text-emerald-300 mt-2">🔄 Cada vegada que generes una rutina, els exercicis canvien automàticament per a més varietat!</p>
+        </div>
+      </div>`;
+      
+      document.getElementById('resultadoEntrenament').innerHTML = html;
+      llençarConfeti();
+      reproduirSo('click');
+    }
+    
+    // ==================== FUNCIONS COMUNES ====================
+    function reproduirSo(tipus) { 
+      if(!document.getElementById('sonidoActivado')?.checked) return; 
+      try { 
+        if(tipus === 'click') new Audio('https://www.soundjay.com/misc/sounds/button-click-01.mp3').play().catch(()=>{}); 
+        else if(tipus === 'beep') { 
+          const ctx = new (window.AudioContext || window.webkitAudioContext)(); 
+          const osc = ctx.createOscillator(), gain = ctx.createGain(); 
+          osc.connect(gain); gain.connect(ctx.destination); 
+          osc.frequency.value = 880; gain.gain.value = 0.15; 
+          osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.4); 
+          setTimeout(() => ctx.close(), 500); 
+        } 
+      } catch(e) {} 
+    }
+    
+    function llençarConfeti() { 
+      for(let i = 0; i < 60; i++) { 
+        const conf = document.createElement('div'); 
+        conf.className = 'fixed pointer-events-none z-[9999]'; 
+        conf.style.left = Math.random() * innerWidth + 'px'; 
+        conf.style.top = '-10px'; 
+        conf.style.width = conf.style.height = Math.random() * 8 + 5 + 'px'; 
+        conf.style.background = `hsl(${Math.random() * 360}, 100%, 60%)`; 
+        conf.style.borderRadius = '50%'; 
+        conf.style.position = 'fixed'; 
+        conf.style.animation = `confettiFall ${Math.random() * 2 + 1.5}s linear forwards`; 
+        document.body.appendChild(conf); 
+        setTimeout(() => conf.remove(), 3000); 
+      } 
+    }
+    const style = document.createElement('style'); 
+    style.textContent = `@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}`; 
+    document.head.appendChild(style);
+    
+    function mostrarModalTimer(segons, nom) { 
+      if(!document.getElementById('timerActivado')?.checked) return; 
+      if(timerInterval) clearInterval(timerInterval); 
+      tempsRestant = segons; 
+      duradaTotalSegons = segons; 
+      document.getElementById('modalExerciciNom').innerText = nom; 
+      document.getElementById('timerSegons').innerText = segons; 
+      document.getElementById('modalAnimacio').innerHTML = '<div class="text-7xl">🧘‍♂️</div>'; 
+      const circ = 553; 
+      document.getElementById('timerCircle').style.strokeDashoffset = circ; 
+      document.getElementById('modalTimer').classList.remove('hidden'); 
+      timerPausat = false; 
+      timerInterval = setInterval(() => { 
+        if(timerPausat) return; 
+        if(tempsRestant <= 0) { 
+          clearInterval(timerInterval); 
+          document.getElementById('modalTimer').classList.add('hidden'); 
+          if(navigator.vibrate) navigator.vibrate(200); 
+        } else { 
+          tempsRestant--; 
+          document.getElementById('timerSegons').innerText = tempsRestant; 
+          const offset = circ - (tempsRestant / duradaTotalSegons) * circ; 
+          document.getElementById('timerCircle').style.strokeDashoffset = offset; 
+        } 
+      }, 1000); 
+    }
+    function pausarTimer() { timerPausat = !timerPausat; reproduirSo('click'); }
+    function tancarModalTimer() { if(timerInterval) clearInterval(timerInterval); document.getElementById('modalTimer').classList.add('hidden'); }
+    function descargarHTML() { 
+      const blob = new Blob([document.documentElement.outerHTML], {type: 'text/html'}); 
+      const a = document.createElement('a'); 
+      a.href = URL.createObjectURL(blob); 
+      a.download = 'habitfit-senior.html'; 
+      a.click(); 
+      reproduirSo('click'); 
+    }
+    
+    // ==================== PESTANYES ====================
+    function canviarTab(tab) {
+      document.getElementById('panelEntrenament').classList.add('hidden');
+      document.getElementById('panelCamara').classList.add('hidden');
+      document.getElementById('panelAlimentacio').classList.add('hidden');
+      document.getElementById('tabEntrenament').classList.remove('tab-active'); document.getElementById('tabEntrenament').classList.add('tab-inactive');
+      document.getElementById('tabCamara').classList.remove('tab-active'); document.getElementById('tabCamara').classList.add('tab-inactive');
+      document.getElementById('tabAlimentacio').classList.remove('tab-active'); document.getElementById('tabAlimentacio').classList.add('tab-inactive');
+      if(tab === 'entrenament') { document.getElementById('panelEntrenament').classList.remove('hidden'); document.getElementById('tabEntrenament').classList.add('tab-active'); }
+      else if(tab === 'camara') { document.getElementById('panelCamara').classList.remove('hidden'); document.getElementById('tabCamara').classList.add('tab-active'); }
+      else if(tab === 'alimentacio') { document.getElementById('panelAlimentacio').classList.remove('hidden'); document.getElementById('tabAlimentacio').classList.add('tab-active'); }
+      reproduirSo('click');
+    }
+    
+    // ==================== CÀMERA POSTURAL ====================
+    async function initPoseDetection() {
+      if(typeof poseDetection === 'undefined') { setTimeout(initPoseDetection, 500); return; }
+      const detectorConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
+      poseDetector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
+    }
+    
+    async function startCamera() {
+      try {
+        if(cameraStream) stopCamera();
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" } });
+        cameraStream = stream;
+        videoElem.srcObject = stream;
+        await videoElem.play();
+        canvasCtx = canvasElem.getContext('2d');
+        const resizeCanvas = () => { canvasElem.width = videoElem.videoWidth; canvasElem.height = videoElem.videoHeight; };
+        videoElem.addEventListener('loadedmetadata', resizeCanvas);
+        if(!poseDetector) await initPoseDetection();
+        detectPoseLoop();
+        document.getElementById('postureMessage').innerHTML = '✅ Càmera activa';
+      } catch(err) { alert('Permet l\'accés a la càmera.'); }
+    }
+    
+    function stopCamera() {
+      if(cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+      if(animationId) cancelAnimationFrame(animationId);
+      videoElem.srcObject = null;
+      if(canvasCtx) canvasCtx.clearRect(0, 0, canvasElem.width, canvasElem.height);
+      document.getElementById('postureMessage').innerHTML = 'Càmera aturada';
+      document.getElementById('postureLed').className = 'w-4 h-4 rounded-full bg-gray-500';
+    }
+    
+    async function detectPoseLoop() {
+      if(!poseDetector || !videoElem || videoElem.readyState < 2) { animationId = requestAnimationFrame(detectPoseLoop); return; }
+      try {
+        const poses = await poseDetector.estimatePoses(videoElem);
+        if(canvasCtx) {
+          canvasCtx.clearRect(0, 0, canvasElem.width, canvasElem.height);
+          canvasCtx.drawImage(videoElem, 0, 0, canvasElem.width, canvasElem.height);
+          if(poses.length > 0) {
+            const kps = poses[0].keypoints;
+            drawKeypoints(kps);
+            analyzePosture(kps);
+          } else resetPostureIndicators();
+        }
+      } catch(e) {}
+      animationId = requestAnimationFrame(detectPoseLoop);
+    }
+    
+    function drawKeypoints(kps) {
+      if(!canvasCtx) return;
+      canvasCtx.strokeStyle = '#10b981'; canvasCtx.lineWidth = 3;
+      const map = Object.fromEntries(kps.map(k => [k.name, k]));
+      if(map.left_shoulder && map.right_shoulder && map.left_shoulder.score>0.3 && map.right_shoulder.score>0.3) {
+        canvasCtx.beginPath(); canvasCtx.moveTo(map.left_shoulder.x, map.left_shoulder.y); canvasCtx.lineTo(map.right_shoulder.x, map.right_shoulder.y); canvasCtx.stroke();
+      }
+      kps.forEach(k => { if(k.score>0.3) { canvasCtx.fillStyle = '#10b981'; canvasCtx.beginPath(); canvasCtx.arc(k.x, k.y, 5, 0, 2*Math.PI); canvasCtx.fill(); } });
+    }
+    
+    function analyzePosture(kps) {
+      const get = (n) => { let p = kps.find(k=>k.name===n); return p && p.score>0.3 ? p : null; };
+      const leftSh = get('left_shoulder'), rightSh = get('right_shoulder'), nose = get('nose');
+      let bad = 0, headMsg = '✅', shMsg = '✅', genMsg = '🟢 Bona';
+      if(nose && leftSh && rightSh) {
+        let midY = (leftSh.y + rightSh.y)/2;
+        if(nose.y > midY + 25) { headMsg = '⚠️ Cap endavant'; bad++; } else headMsg = '✅ Alineat';
+      }
+      if(leftSh && rightSh) {
+        let diff = Math.abs(leftSh.y - rightSh.y);
+        if(diff > 20) { shMsg = '⚠️ Espatlles desiguals'; bad++; } else shMsg = '✅ Alineades';
+      }
+      if(bad >= 1) { genMsg = '🔴 Corregeix postura'; document.getElementById('postureLed').className = 'w-4 h-4 rounded-full bg-red-500 animate-pulse'; if(document.getElementById('sonidoActivado')?.checked) reproduirSo('beep'); }
+      else { genMsg = '🟢 Postura correcta'; document.getElementById('postureLed').className = 'w-4 h-4 rounded-full bg-green-500'; }
+      document.getElementById('headStatus').innerHTML = headMsg;
+      document.getElementById('shouldersStatus').innerHTML = shMsg;
+      document.getElementById('generalStatus').innerHTML = genMsg;
+      document.getElementById('postureMessage').innerHTML = genMsg;
+    }
+    
+    function resetPostureIndicators() {
+      document.getElementById('headStatus').innerHTML = '—';
+      document.getElementById('shouldersStatus').innerHTML = '—';
+      document.getElementById('generalStatus').innerHTML = '—';
+      document.getElementById('postureMessage').innerHTML = 'Esperant...';
+      document.getElementById('postureLed').className = 'w-4 h-4 rounded-full bg-gray-500';
+    }
+    
+    // ==================== NUTRICIÓ ====================
+    function generarPlanNutricional() {
+      const pes = parseFloat(document.getElementById('nutPeso').value);
+      const altura = parseFloat(document.getElementById('nutAltura').value);
+      const edad = parseFloat(document.getElementById('nutEdad').value);
+      const somatotipo = document.getElementById('nutSomatotipo').value;
+      const factorAct = parseFloat(document.getElementById('nutActividad').value);
+      const objetivo = document.getElementById('nutObjetivo').value;
+      const dieta = document.getElementById('nutDieta').value;
+      const alergias = document.getElementById('nutAlergias').value;
+      const genero = document.getElementById('genero')?.value || 'Masculí';
+      
+      if(!pes || !altura || !edad) { alert("Si us plau, omple pes, alçada i edat"); return; }
+      
+      let tmb = (genero === 'Masculí') ? (88.362 + (13.397 * pes) + (4.799 * altura) - (5.677 * edad)) : (447.593 + (9.247 * pes) + (3.098 * altura) - (4.330 * edad));
+      let caloriasMantenimiento = Math.round(tmb * factorAct);
+      let caloriasFinal = (objetivo === 'perdre') ? Math.round(caloriasMantenimiento - 350) : (objetivo === 'definir' ? Math.round(caloriasMantenimiento - 200) : caloriasMantenimiento);
+      if(caloriasFinal < 1200) caloriasFinal = 1200;
+      
+      let proteines = Math.round(pes * 1.2);
+      let greixos = Math.round((caloriasFinal * 0.3) / 9);
+      let carbs = Math.round((caloriasFinal - (proteines * 4) - (greixos * 9)) / 4);
+      
+      let alimentosRecomendados = "";
+      if(edad >= 65) alimentosRecomendados = "🥗 Prioritza aliments tous i fàcils de mastegar: verdura cuinada, peix, ous, llegums, fruita madura. Mantén bona hidratació.";
+      else if(somatotipo === 'Endomorf') alimentosRecomendados = "🥦 Controla carbohidrats, prioritza verdura i proteïna magra.";
+      else alimentosRecomendados = "🍎 Mantén una dieta equilibrada amb fruita, verdura, proteïna i cereals integrals.";
+      
+      if(dieta === 'Vegana') alimentosRecomendados += " Fonts vegetals: tofu, llegums, tempeh.";
+      if(alergias) alimentosRecomendados += ` Evita: ${alergias}.`;
+      
+      const html = `<div class="bg-slate-700/50 p-4 rounded-xl space-y-3">
+        <div class="bg-emerald-800/40 p-3 rounded-lg text-center"><span class="font-bold text-lg">🍽️ PLA NUTRICIONAL ADAPTAT</span></div>
+        <div><strong>🔥 Calories diàries:</strong> <span class="text-emerald-300 font-bold text-lg">${caloriasFinal} kcal</span></div>
+        <div><strong>🥩 Proteïnes:</strong> ${proteines}g</div>
+        <div><strong>🧈 Greixos:</strong> ${greixos}g</div>
+        <div><strong>🍚 Carbohidrats:</strong> ${carbs}g</div>
+        <div class="border-t border-emerald-500/30 my-2"></div>
+        <div><strong>📌 Recomanacions:</strong><br>${alimentosRecomendados}</div>
+        <div class="text-xs text-amber-300">💧 Beu 1.5-2L d'aigua al dia. Menja en horaris regulars.</div>
+      </div>`;
+      document.getElementById('nutResultado').innerHTML = html;
+      llençarConfeti();
+    }
+    
+    // ==================== INICIALITZACIÓ ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('startCameraBtn').addEventListener('click', startCamera);
+      document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
+      initPoseDetection();
+    });
+    
+    window.canviarTab = canviarTab;
+    window.generarPlanEntrenament = generarPlanEntrenament;
+    window.generarPlanNutricional = generarPlanNutricional;
+    window.mostrarModalTimer = mostrarModalTimer;
+    window.pausarTimer = pausarTimer;
+    window.tancarModalTimer = tancarModalTimer;
+    window.descargarHTML = descargarHTML;
+  </script>
+</body>
+</html>
