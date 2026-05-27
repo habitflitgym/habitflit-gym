@@ -1,0 +1,62 @@
+{
+  "name": "HABITFIT - Entrenador Adaptatiu",
+  "short_name": "HABITFIT",
+  "description": "Entrenador de fitness adaptat a tota edat amb sensor postural IA",
+  "start_url": "https://habitflitgym.github.io/habitflit-gym/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#10b981",
+  "scope": "https://habitflitgym.github.io/habitflit-gym/",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230a0a1a' width='192' height='192'/><text x='96' y='120' font-size='80' font-family='Arial' text-anchor='middle' fill='%2310b981' dominant-baseline='middle'>💪</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%230a0a1a' width='512' height='512'/><text x='256' y='340' font-size='200' font-family='Arial' text-anchor='middle' fill='%2310b981' dominant-baseline='middle'>💪</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%2310b981' width='192' height='192'/><text x='96' y='120' font-size='80' font-family='Arial' text-anchor='middle' fill='%23ffffff' dominant-baseline='middle'>💪</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%230a0a1a' width='540' height='720'/><text x='270' y='100' font-size='40' font-family='Arial' text-anchor='middle' fill='%2310b981'>HABITFIT</text><text x='270' y='400' font-size='60' font-family='Arial' text-anchor='middle' fill='%23ffffff'>🏋️💪</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["health", "fitness"],
+  "shortcuts": [
+    {
+      "name": "Generar Rutina",
+      "short_name": "Rutina",
+      "description": "Generar una nova rutina d'entrenament adaptada",
+      "url": "https://habitflitgym.github.io/habitflit-gym/?tab=entrenament",
+      "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text x='48' y='60' font-size='40' text-anchor='middle'>🏋️</text></svg>", "sizes": "96x96"}]
+    },
+    {
+      "name": "Sensor Postural",
+      "short_name": "Càmera",
+      "description": "Activar el sensor de postura IA",
+      "url": "https://habitflitgym.github.io/habitflit-gym/?tab=camara",
+      "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text x='48' y='60' font-size='40' text-anchor='middle'>📷</text></svg>", "sizes": "96x96"}]
+    },
+    {
+      "name": "Plan Nutricional",
+      "short_name": "Nutrició",
+      "description": "Obtenir el teu pla nutricional personalitzat",
+      "url": "https://habitflitgym.github.io/habitflit-gym/?tab=alimentacio",
+      "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text x='48' y='60' font-size='40' text-anchor='middle'>🍎</text></svg>", "sizes": "96x96"}]
+    }
+  ]
+}
