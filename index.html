@@ -8,61 +8,21 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="HABITFIT PRO" />
-  <link rel="manifest" href="https://habitflitgym.github.io/habitflit-gym/manifest.json" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230a0a1a' width='192' height='192'/><text x='96' y='120' font-size='100' fill='%2310b981' text-anchor='middle' font-family='Arial'>🏋️</text></svg>" />
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230a0a1a' width='192' height='192' rx='45'/><text x='96' y='120' font-size='100' fill='%2310b981' text-anchor='middle' font-family='Arial'>🏋️</text></svg>" />
-  <title>🏋️ HABITFIT PRO · Entrenador Adaptatiu per a Totes les Edats</title>
+  <title>🏋️ HABITFIT PRO</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.0/dist/pose-detection.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap');
     * { font-family: 'Inter', sans-serif; }
-    body {
-      background: radial-gradient(circle at 10% 20%, #0a0f1e, #0a0a1a);
-      color: white;
-      min-height: 100vh;
-    }
-    .glass {
-      background: rgba(10, 20, 30, 0.65);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-    .tab-active {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-      border-bottom: 2px solid #10b981;
-    }
-    .tab-inactive {
-      background: rgba(30, 41, 59, 0.7);
-      color: #94a3b8;
-    }
+    body { background: radial-gradient(circle at 10% 20%, #0a0f1e, #0a0a1a); color: white; min-height: 100vh; }
+    .glass { background: rgba(10, 20, 30, 0.65); backdrop-filter: blur(16px); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .tab-active { background: linear-gradient(135deg, #10b981, #059669); color: white; border-bottom: 2px solid #10b981; }
+    .tab-inactive { background: rgba(30, 41, 59, 0.7); color: #94a3b8; }
     .btn-premium { background: linear-gradient(135deg, #10b981, #059669, #06b6d4); background-size: 200%; transition: all 0.3s; }
     .btn-premium:hover { background-position: 100%; transform: translateY(-2px); box-shadow: 0 15px 30px -10px #10b981; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
-    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.6} }
-    #cameraPreview, #poseCanvas { transform: scaleX(-1); }
-    .posture-led-good { background: #10b981; box-shadow: 0 0 12px #10b981; }
-    .posture-led-bad { background: #ef4444; animation: pulse 0.8s infinite; }
-    .posture-led-warning { background: #eab308; }
-    .movement-indicator { 
-      padding: 12px; 
-      border-radius: 8px; 
-      margin: 4px 0; 
-      font-weight: bold;
-      transition: all 0.3s;
-    }
-    .movement-active { 
-      background: linear-gradient(90deg, #10b981, #06b6d4);
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
-    }
-    .movement-inactive { 
-      background: rgba(71, 85, 105, 0.5);
-      color: #94a3b8;
-    }
+    #cameraPreview { transform: scaleX(-1); }
   </style>
 </head>
 <body class="p-4 md:p-6">
@@ -79,355 +39,156 @@
 
     <!-- PESTANYES -->
     <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
-      <button onclick="canviarTab('perfil')" id="tabPerfil" class="tab-active px-5 py-3 rounded-xl font-bold transition">👤 PERFIL ESPORTIU</button>
+      <button onclick="canviarTab('perfil')" id="tabPerfil" class="tab-active px-5 py-3 rounded-xl font-bold transition">👤 PERFIL</button>
       <button onclick="canviarTab('entrenament')" id="tabEntrenament" class="tab-inactive px-5 py-3 rounded-xl font-bold transition">🏋️ ENTRENAMENT</button>
       <button onclick="canviarTab('nutrició')" id="tabNutricio" class="tab-inactive px-5 py-3 rounded-xl font-bold transition">🍎 NUTRICIÓ</button>
       <button onclick="canviarTab('camara')" id="tabCamara" class="tab-inactive px-5 py-3 rounded-xl font-bold transition">📷 CÀMERA IA</button>
     </div>
 
-    <!-- PESTANYA 1: PERFIL ESPORTIU -->
+    <!-- PERFIL -->
     <div id="panelPerfil" class="transition-all">
-      <div class="grid lg:grid-cols-2 gap-6">
-        <!-- DADES PERSONALS -->
-        <div class="glass rounded-3xl p-6">
-          <h2 class="text-2xl font-bold mb-4 text-emerald-400">📋 Dades personals</h2>
-          <div class="space-y-3">
-            <input id="perfilEdat" type="number" placeholder="📅 Edat (anys)" class="w-full p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
-            <select id="perfilGenero" class="w-full p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30">
-              <option>Masculí</option>
-              <option>Femení</option>
-            </select>
-            <input id="perfilPeso" type="number" placeholder="⚖️ Pes (kg)" class="w-full p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
-            <input id="perfilAltura" type="number" placeholder="📏 Alçada (cm)" class="w-full p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
-            <select id="perfilSomatotipo" class="w-full p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30">
-              <option>Ectomorf</option>
-              <option>Mesomorf</option>
-              <option>Endomorf</option>
-            </select>
-            <input type="text" id="perfilLesiones" placeholder="🩺 Lesions (espatlla, genoll, esquena...)" class="w-full p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
-          </div>
-          <button onclick="calcularDadesPersonals()" class="btn-premium w-full mt-5 p-3 rounded-xl font-bold">📊 CALCULAR DADES</button>
+      <div class="glass rounded-3xl p-6 mb-4">
+        <h2 class="text-2xl font-bold mb-4 text-emerald-400">📋 Dades personals</h2>
+        <div class="grid md:grid-cols-2 gap-3 mb-4">
+          <input id="edad" type="number" placeholder="📅 Edat" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
+          <select id="genero" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30">
+            <option>Masculí</option><option>Femení</option>
+          </select>
+          <input id="peso" type="number" placeholder="⚖️ Pes (kg)" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
+          <input id="altura" type="number" placeholder="📏 Alçada (cm)" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
         </div>
-
-        <!-- BASE CIENTÍFICA -->
-        <div class="glass rounded-3xl p-6">
-          <h2 class="text-2xl font-bold mb-4 text-emerald-400">🔬 Base científica</h2>
-          <div id="baseCientifica" class="space-y-3 text-sm">
-            <p class="text-slate-400">Metabolisme basal (TMB) amb equació de Harris-Benedict (revisada per Mifflin-St Jeor). Gasto energètic total (GEDT) = TMB × factor d'activitat. Aquests valors són el punt de partida per a qualsevol pla nutricional personalitzat.</p>
-            <div class="bg-emerald-900/30 p-3 rounded-lg">
-              <h3 class="font-bold text-emerald-300 mb-2">📊 METABOLISME (actual)</h3>
-              <div class="space-y-1 text-xs">
-                <div>TMB: <span id="tmb" class="text-emerald-300 font-bold">-</span> kcal/dia</div>
-                <div>GEDT: <span id="gedt" class="text-emerald-300 font-bold">-</span> kcal/dia</div>
-                <div>IMC: <span id="imc" class="text-emerald-300 font-bold">-</span> kg/m²</div>
-              </div>
-            </div>
-            <div class="bg-amber-900/30 p-3 rounded-lg">
-              <h3 class="font-bold text-amber-300">💡 Consell:</h3>
-              <p id="conseill" class="text-xs">Selecciona les teves dades i calcula.</p>
-            </div>
-          </div>
-        </div>
+        <button onclick="calcularPerfil()" class="btn-premium w-full p-3 rounded-xl font-bold">📊 CALCULAR</button>
       </div>
-
-      <!-- OBJECTIUS I PREFERÈNCIES -->
-      <div class="glass rounded-3xl p-6 mt-6">
-        <h2 class="text-2xl font-bold mb-4 text-emerald-400">🎯 Objectius i preferències</h2>
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <select id="perfilNivel" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30">
-            <option>Principiant</option>
-            <option>Intermedi</option>
-            <option>Avançat</option>
-          </select>
-          <select id="perfilObjetivo" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30">
-            <option>Mobilitat i salut</option>
-            <option>Perdre greix suau</option>
-            <option>Guanyar força funcional</option>
-            <option>Hipertròfia muscular</option>
-          </select>
-          <input id="perfilMinutos" type="number" placeholder="⏱️ Minuts (20-45)" value="30" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
-          <select id="perfilActividad" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30">
-            <option value="1.2">Sedentari</option>
-            <option value="1.375">Lleugerament actiu</option>
-            <option value="1.55" selected>Moderadament actiu</option>
-            <option value="1.725">Molt actiu</option>
-          </select>
-        </div>
+      <div id="resultPerfil" class="glass rounded-3xl p-6">
+        <div class="text-center text-slate-400">Completa els dades i clica CALCULAR</div>
       </div>
     </div>
 
-    <!-- PESTANYA 2: ENTRENAMENT -->
+    <!-- ENTRENAMENT -->
     <div id="panelEntrenament" class="hidden transition-all">
       <div class="glass rounded-3xl p-6">
-        <h2 class="text-2xl font-bold mb-4">⚙️ Configura la teva rutina</h2>
-        <div class="grid md:grid-cols-2 gap-4 mb-4">
-          <select id="entrenNivel" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30">
-            <option>Principiant</option>
-            <option>Intermedi</option>
-            <option>Avançat</option>
-          </select>
-          <input id="entrenMinutos" type="number" placeholder="⏱️ Durada (min)" value="30" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
-        </div>
-        <h3 class="font-bold text-cyan-300 mb-3">📅 Dies a la setmana</h3>
-        <div class="flex flex-wrap gap-2 mb-4">
-          <button onclick="toggleDia('Diluns')" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-emerald-600 transition">Diluns</button>
-          <button onclick="toggleDia('Dimarts')" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-emerald-600 transition">Dimarts</button>
-          <button onclick="toggleDia('Dimecres')" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-emerald-600 transition">Dimecres</button>
-          <button onclick="toggleDia('Dijous')" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-emerald-600 transition">Dijous</button>
-          <button onclick="toggleDia('Divendres')" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-emerald-600 transition">Divendres</button>
-          <button onclick="toggleDia('Dissabte')" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-emerald-600 transition">Dissabte</button>
-          <button onclick="toggleDia('Diumenge')" class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-emerald-600 transition">Diumenge</button>
+        <h2 class="text-2xl font-bold mb-4">🏋️ Rutina</h2>
+        <div class="grid md:grid-cols-2 gap-3 mb-4">
+          <select id="nivel" class="p-3 rounded-xl bg-slate-800/90"><option>Principiant</option><option>Intermedi</option><option>Avançat</option></select>
+          <input id="minutos" type="number" value="30" placeholder="Minuts" class="p-3 rounded-xl bg-slate-800/90" />
         </div>
         <button onclick="generarRutina()" class="btn-premium w-full p-3 rounded-xl font-bold">✏️ GENERAR RUTINA</button>
-      </div>
-      <div id="resultatRutina" class="glass rounded-3xl p-6 mt-6 max-h-[60vh] overflow-auto">
-        <div class="text-center text-slate-400 py-10">✨ Selecciona la rutina i clica "GENERAR" ✨</div>
-      </div>
-      <div class="glass rounded-3xl p-6 mt-4">
-        <h3 class="font-bold text-emerald-300 mb-3">📊 Periodització esportiva</h3>
-        <p class="text-sm text-slate-300">Variació sistemàtica d'intensitat i volum per maximitzar adaptacions i prevenir sobreentrenament. Basat en els principis de l'ACSM i el NSCA.</p>
+        <div id="resultRutina" class="mt-4 space-y-2 max-h-96 overflow-auto">
+          <div class="text-slate-400 text-center p-4">Clica GENERAR</div>
+        </div>
       </div>
     </div>
 
-    <!-- PESTANYA 3: NUTRICIÓ -->
+    <!-- NUTRICIÓ -->
     <div id="panelNutricio" class="hidden transition-all">
       <div class="glass rounded-3xl p-6">
-        <h2 class="text-2xl font-bold mb-4">🍎 Pla nutricional personalitzat</h2>
-        <div class="grid lg:grid-cols-2 gap-6">
-          <!-- NECESSITATS ENERGÈTIQUES -->
-          <div class="bg-slate-800/50 p-5 rounded-2xl">
-            <h3 class="font-bold text-emerald-300 mb-3">⚡ Necessitats energètiques</h3>
-            <div class="space-y-2 text-sm">
-              <div>TMB: <span id="nutTmb" class="text-emerald-300 font-bold">-</span> kcal</div>
-              <div>GEDT: <span id="nutGedt" class="text-emerald-300 font-bold">-</span> kcal</div>
-              <div>Objectiu calòric: <span id="nutObjetiuCalorico" class="text-emerald-300 font-bold">-</span> kcal/dia</div>
-              <hr class="border-emerald-500/30 my-2" />
-              <select id="nutObjetivo" class="w-full p-2 rounded-lg bg-slate-700/80 text-sm">
-                <option value="perdre">Perdre greix (deficit -350 kcal)</option>
-                <option value="mantenir" selected>Mantenir pes</option>
-                <option value="definir">Definir musculatura (deficit -200 kcal)</option>
-              </select>
-            </div>
-            <button onclick="calcularNutricio()" class="btn-premium w-full mt-4 p-2 rounded-xl font-bold text-sm">🍽️ CALCULAR PLA</button>
-          </div>
-
-          <!-- MACRONUTRIENTS RECOMANATS -->
-          <div id="nutMacros" class="bg-slate-800/50 p-5 rounded-2xl">
-            <h3 class="font-bold text-emerald-300 mb-3">🥗 Macronutrients recomanats</h3>
-            <div class="space-y-2 text-sm">
-              <div>Proteïnes: <span id="nutProteines" class="text-emerald-300 font-bold">-</span>g (<span id="nutProteinesPorc" class="text-amber-300">-</span>%)</div>
-              <div>Hidrats de carboni: <span id="nutCarbs" class="text-emerald-300 font-bold">-</span>g (<span id="nutCarbsPorc" class="text-amber-300">-</span>%)</div>
-              <div>Greixos: <span id="nutGreixos" class="text-emerald-300 font-bold">-</span>g (<span id="nutGreixosPorc" class="text-amber-300">-</span>%)</div>
-            </div>
-          </div>
+        <h2 class="text-2xl font-bold mb-4">🍎 Nutrició</h2>
+        <button onclick="calcularNutricio()" class="btn-premium w-full p-3 rounded-xl font-bold">🍽️ CALCULAR PLA</button>
+        <div id="resultNutricio" class="mt-4 space-y-2">
+          <div class="text-slate-400 text-center p-4">Primer calcula el perfil</div>
         </div>
-
-        <!-- PAUTAS D'HIDRATACIÓ -->
-        <div class="glass rounded-3xl p-6 mt-6">
-          <h3 class="font-bold text-cyan-300 mb-3">💧 Pautes d'hidratació (ACSM)</h3>
-          <div class="grid md:grid-cols-3 gap-4">
-            <div class="bg-slate-800/50 p-3 rounded-lg">
-              <p class="text-xs text-slate-400">Pre-exercici</p>
-              <p class="font-bold text-cyan-300">5-10 mL/kg</p>
-              <p class="text-xs text-slate-400">2-4 h abans</p>
-            </div>
-            <div class="bg-slate-800/50 p-3 rounded-lg">
-              <p class="text-xs text-slate-400">Durant exercici</p>
-              <p class="font-bold text-cyan-300">0.4-0.8 L/hora</p>
-              <p class="text-xs text-slate-400">ajustar per suor</p>
-            </div>
-            <div class="bg-slate-800/50 p-3 rounded-lg">
-              <p class="text-xs text-slate-400">Post-exercici</p>
-              <p class="font-bold text-cyan-300">1.25-1.5 L per kg perdut</p>
-              <p class="text-xs text-slate-400">en 4 hores</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- SUPLEMENTOS CON EVIDENCIA -->
-        <div class="glass rounded-3xl p-6 mt-6">
-          <h3 class="font-bold text-yellow-300 mb-3">💊 Suplements amb evidència</h3>
-          <div class="space-y-2 text-sm">
-            <div class="flex items-start gap-2">
-              <span class="text-pink-400">💊</span>
-              <div>
-                <strong>Cafeïna</strong> (3-6 mg/kg): millora rendiment en alta intensitat.
-              </div>
-            </div>
-            <div class="flex items-start gap-2">
-              <span class="text-yellow-400">⚡</span>
-              <div>
-                <strong>Creatina</strong> (3-5 g/dia): augmenta força i potència.
-              </div>
-            </div>
-            <div class="flex items-start gap-2">
-              <span class="text-cyan-400">🧪</span>
-              <div>
-                <strong>Beta-alanina</strong> (4-6 g/dia): retarda la fatiga muscular.
-              </div>
-            </div>
-            <div class="flex items-start gap-2">
-              <span class="text-white">📦</span>
-              <div>
-                <strong>Proteïna de sèrum</strong>: recuperació i síntesi proteica.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <button onclick="actualitzarPlanificacio()" class="btn-premium w-full mt-6 p-3 rounded-xl font-bold">🔄 ACTUALITZAR PLANIFICACIÓ</button>
       </div>
     </div>
 
-    <!-- PESTANYA 4: CÀMERA IA MEJORADA -->
+    <!-- CÀMERA IA - COMPLETAMENTE NUEVA -->
     <div id="panelCamara" class="hidden transition-all">
       <div class="glass rounded-3xl p-6">
-        <h2 class="text-2xl font-bold mb-3">📷 Sensor de Moviment Avançat · IA Poderesa</h2>
-        <p class="text-slate-300 mb-4 text-sm">🎥 Detecta moviments en temps real amb IA avançada. Reconeix poses, gestos i exercicis.</p>
+        <h2 class="text-2xl font-bold mb-3">📷 Anàlisi de Postura en Temps Real</h2>
         
         <div class="grid lg:grid-cols-2 gap-6">
-          <!-- CAMERA -->
-          <div class="bg-black/50 rounded-2xl p-4">
-            <div class="relative aspect-video bg-slate-900 rounded-xl overflow-hidden border-2 border-emerald-500/50">
-              <video id="cameraPreview" class="w-full h-full object-cover" autoplay playsinline muted></video>
-              <canvas id="poseCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+          <!-- VIDEO -->
+          <div>
+            <div class="relative bg-black rounded-2xl overflow-hidden border-2 border-emerald-500/50 mb-4">
+              <video id="video" width="640" height="480" autoplay playsinline muted style="width:100%; display:block;"></video>
+              <div id="loading" class="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div class="text-center">
+                  <div class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-2"></div>
+                  <p>Carregant model...</p>
+                </div>
+              </div>
             </div>
-            <div class="flex gap-3 mt-4">
-              <button id="startCameraBtn" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl font-bold flex-1 transition">🎥 INICIAR CÀMERA</button>
-              <button id="stopCameraBtn" class="bg-red-600/70 hover:bg-red-500 px-4 py-2 rounded-xl font-bold flex-1 transition">⏹️ ATURAR</button>
+            <div class="flex gap-2">
+              <button onclick="startDetection()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 px-4 py-3 rounded-xl font-bold">🎥 INICIAR</button>
+              <button onclick="stopDetection()" class="flex-1 bg-red-600 hover:bg-red-500 px-4 py-3 rounded-xl font-bold">⏹️ ATURAR</button>
             </div>
-            <p class="text-xs text-center text-slate-400 mt-2">✅ Permet l'accés a la càmera · L'IA analitzarà els moviments</p>
           </div>
 
-          <!-- ANÁLISIS POSTURAL MEJORADO -->
+          <!-- ANÁLISIS -->
           <div class="bg-slate-800/60 rounded-2xl p-5 flex flex-col">
-            <h3 class="text-xl font-bold text-emerald-400 mb-3">🩺 ANÀLISI EN TEMPS REAL</h3>
+            <h3 class="text-xl font-bold text-emerald-400 mb-3">🩺 Resultats</h3>
             
-            <!-- STATUS LED -->
-            <div id="postureStatus" class="p-4 bg-slate-900/80 rounded-xl mb-4">
-              <div class="flex items-center gap-3">
-                <div id="postureLed" class="w-5 h-5 rounded-full bg-gray-500 animate-pulse"></div>
-                <span id="postureMessage" class="font-semibold text-lg">🔄 Inicialitzant...</span>
+            <div class="space-y-3 flex-1 overflow-y-auto">
+              <div class="p-3 bg-slate-700/50 rounded-lg">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm">🧠 Cap</span>
+                  <span id="headPose" class="font-bold text-amber-300">—</span>
+                </div>
               </div>
-            </div>
+              
+              <div class="p-3 bg-slate-700/50 rounded-lg">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm">🦾 Espatlles</span>
+                  <span id="shouldersPose" class="font-bold text-amber-300">—</span>
+                </div>
+              </div>
+              
+              <div class="p-3 bg-slate-700/50 rounded-lg">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm">📐 Cadera</span>
+                  <span id="hipPose" class="font-bold text-amber-300">—</span>
+                </div>
+              </div>
 
-            <!-- POSTURA INDICATORS -->
-            <div class="space-y-2 mb-4">
-              <div class="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
-                <span>🧠 Cap:</span>
-                <span id="headStatus" class="font-bold text-amber-300 text-lg">—</span>
+              <div class="p-3 bg-slate-700/50 rounded-lg">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm">🦵 Cames</span>
+                  <span id="legsPose" class="font-bold text-amber-300">—</span>
+                </div>
               </div>
-              <div class="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
-                <span>🦾 Espatlles:</span>
-                <span id="shouldersStatus" class="font-bold text-amber-300 text-lg">—</span>
-              </div>
-              <div class="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
-                <span>📐 Cadera:</span>
-                <span id="hipStatus" class="font-bold text-amber-300 text-lg">—</span>
-              </div>
-              <div class="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
-                <span>🦵 Cames:</span>
-                <span id="legsStatus" class="font-bold text-amber-300 text-lg">—</span>
-              </div>
-            </div>
 
-            <!-- MOVIMIENTOS DETECTADOS -->
-            <div class="mb-4">
-              <h4 class="font-bold text-cyan-300 mb-2">🎯 Moviments detectats:</h4>
-              <div id="movimentsDetectats" class="space-y-1 text-xs max-h-32 overflow-y-auto">
-                <div class="text-slate-500">Esperant moviments...</div>
+              <div class="p-3 bg-emerald-900/30 rounded-lg">
+                <span class="text-sm">Status:</span>
+                <div id="status" class="text-sm mt-1 font-bold text-emerald-300">🔄 Esperant...</div>
               </div>
-            </div>
-
-            <!-- CONFIDENCE -->
-            <div class="p-2 bg-emerald-900/30 rounded-lg text-xs mt-auto">
-              <div>Confiança detecció: <span id="confidenceScore" class="text-emerald-300 font-bold">0%</span></div>
             </div>
           </div>
         </div>
 
-        <!-- INFORMACIÓN CIENTÍFICA -->
-        <div class="glass rounded-3xl p-6 mt-6">
-          <h3 class="font-bold text-cyan-300 mb-3">🔬 Tecnologia de detecció</h3>
-          <p class="text-sm text-slate-300">Utilitza MoveNet per a detecció de poses en 17 punts de l'esquelet i analitza el moviment en temps real. Detecta:</p>
-          <ul class="text-xs text-slate-300 list-disc pl-4 mt-2 space-y-1">
-            <li>✅ Alignació del cos (cap, espatlles, cadera, cames)</li>
-            <li>✅ Angles de les articulacions</li>
-            <li>✅ Velocitat i amplitud de moviment</li>
-            <li>✅ Simetria corporal</li>
-            <li>✅ Bones practiques de tècnica (forma)</li>
+        <div class="mt-6 p-4 bg-slate-800/50 rounded-xl text-sm">
+          <p class="text-cyan-300 font-bold mb-2">ℹ️ Com funciona:</p>
+          <ul class="text-slate-300 space-y-1 text-xs">
+            <li>✓ Clica "INICIAR" i permet accés a la càmera</li>
+            <li>✓ Posiciona't davant de la càmera (cos complet visible)</li>
+            <li>✓ L'IA analizarà la teva postura en temps real</li>
+            <li>✓ Rebràs feedback sobre alineació corporal</li>
           </ul>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL TIMER -->
-  <div id="modalTimer" class="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 hidden">
-    <div class="bg-slate-800 p-8 rounded-3xl text-center max-w-md w-full border-2 border-emerald-500">
-      <div class="text-8xl mb-3" id="modalAnimacio">🧘</div>
-      <h3 class="text-2xl font-bold" id="modalExerciciNom">Exercici</h3>
-      <div class="relative w-48 h-48 mx-auto my-4">
-        <svg class="w-full h-full transform -rotate-90">
-          <circle cx="96" cy="96" r="88" stroke="#1e293b" stroke-width="8" fill="none" />
-          <circle id="timerCircle" cx="96" cy="96" r="88" stroke="#10b981" stroke-width="8" fill="none" stroke-dasharray="553" stroke-dashoffset="553" stroke-linecap="round" />
-        </svg>
-        <div class="absolute inset-0 flex items-center justify-center">
-          <div class="text-5xl font-bold"><span id="timerSegons">60</span>s</div>
-        </div>
-      </div>
-      <div class="flex gap-3 mt-4">
-        <button onclick="tancarModalTimer()" class="flex-1 bg-red-500/80 py-2 rounded-xl">Tancar</button>
-        <button onclick="pausarTimer()" class="flex-1 bg-yellow-500/80 py-2 rounded-xl">Pausa</button>
-      </div>
-    </div>
-  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.5.1635988162"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.5.1635988162"></script>
 
   <script>
-    // ==================== VARIABLES GLOBALS ====================
-    let timerInterval = null, tempsRestant = 0, timerPausat = false, duradaTotalSegons = 0;
-    let poseDetector = null, animationId = null, cameraStream = null;
-    let diasSeleccionats = new Set();
-    const videoElem = document.getElementById('cameraPreview');
-    const canvasElem = document.getElementById('poseCanvas');
+    let isDetecting = false;
+    let videoElement = null;
     let canvasCtx = null;
-    let frameCount = 0;
-    let previousKeypoints = null;
+    const Pose = window.Pose;
+    const DrawingUtils = window.DrawingUtils;
+    const Camera = window.Camera;
 
-    // ==================== DADES D'EXERCICIS ====================
-    const exercicis = {
-      Principiant: [
-        {nom: 'Flexions assegudes', series: '3x8', temps: 40, descans: 30},
-        {nom: 'Elevació de genolls', series: '3x10', temps: 35, descans: 25},
-        {nom: 'Estiraments estàtics', series: '2x20s', temps: 20, descans: 10},
-        {nom: 'Plank modificat', series: '3x15s', temps: 15, descans: 20},
-        {nom: 'Caminada en lloc', series: '2x1min', temps: 60, descans: 30}
-      ],
-      Intermedi: [
-        {nom: 'Sentadilles', series: '4x10', temps: 45, descans: 30},
-        {nom: 'Flexions normales', series: '3x12', temps: 50, descans: 25},
-        {nom: 'Plank estàtic', series: '3x30s', temps: 30, descans: 20},
-        {nom: 'Estocades alternes', series: '3x8 cada cama', temps: 40, descans: 25},
-        {nom: 'Salts suaus', series: '3x15', temps: 45, descans: 30}
-      ],
-      Avançat: [
-        {nom: 'Flexions a una mà', series: '4x5', temps: 60, descans: 30},
-        {nom: 'Sentadilles jump', series: '4x12', temps: 50, descans: 35},
-        {nom: 'Plank amb rotació', series: '3x40s', temps: 40, descans: 25},
-        {nom: 'Burpees', series: '3x10', temps: 60, descans: 40},
-        {nom: 'Mountain climbers', series: '3x30s', temps: 30, descans: 20}
-      ]
-    };
-
-    // ==================== FUNCIONS PRINCIPALS ====================
     function canviarTab(tab) {
       document.getElementById('panelPerfil').classList.add('hidden');
       document.getElementById('panelEntrenament').classList.add('hidden');
       document.getElementById('panelNutricio').classList.add('hidden');
       document.getElementById('panelCamara').classList.add('hidden');
-      document.querySelectorAll('[id^="tab"]').forEach(btn => {
-        btn.classList.remove('tab-active');
-        btn.classList.add('tab-inactive');
+      document.querySelectorAll('[id^="tab"]').forEach(b => {
+        b.classList.remove('tab-active');
+        b.classList.add('tab-inactive');
       });
 
       if(tab === 'perfil') {
@@ -442,489 +203,210 @@
       } else if(tab === 'camara') {
         document.getElementById('panelCamara').classList.remove('hidden');
         document.getElementById('tabCamara').classList.add('tab-active');
+        setTimeout(() => initCamera(), 500);
       }
     }
 
-    function calcularDadesPersonals() {
-      const pes = parseFloat(document.getElementById('perfilPeso').value);
-      const altura = parseFloat(document.getElementById('perfilAltura').value);
-      const edad = parseFloat(document.getElementById('perfilEdat').value);
-      const genero = document.getElementById('perfilGenero').value;
-      const actividad = parseFloat(document.getElementById('perfilActividad').value);
+    function calcularPerfil() {
+      const peso = parseFloat(document.getElementById('peso').value);
+      const altura = parseFloat(document.getElementById('altura').value);
+      const edad = parseFloat(document.getElementById('edad').value);
+      const genero = document.getElementById('genero').value;
 
-      if(!pes || !altura || !edad) {
-        alert('Omple totes les dades');
+      if(!peso || !altura || !edad) {
+        alert('Omple tots els camps');
         return;
       }
 
-      let tmb = (genero === 'Masculí') 
-        ? (88.362 + (13.397 * pes) + (4.799 * altura) - (5.677 * edad))
-        : (447.593 + (9.247 * pes) + (3.098 * altura) - (4.330 * edad));
+      let tmb = (genero === 'Masculí')
+        ? (88.362 + (13.397 * peso) + (4.799 * altura) - (5.677 * edad))
+        : (447.593 + (9.247 * peso) + (3.098 * altura) - (4.330 * edad));
       tmb = Math.round(tmb);
+      let gedt = Math.round(tmb * 1.55);
+      let imc = (peso / ((altura/100)**2)).toFixed(1);
 
-      let gedt = Math.round(tmb * actividad);
-      let imc = (pes / ((altura / 100) ** 2)).toFixed(1);
+      let html = `<div class="bg-emerald-900/40 p-4 rounded-xl space-y-2">
+        <h3 class="font-bold text-lg text-emerald-300">📊 Els teus resultats:</h3>
+        <div>TMB: <span class="font-bold text-emerald-300">${tmb} kcal/dia</span></div>
+        <div>GEDT: <span class="font-bold text-emerald-300">${gedt} kcal/dia</span></div>
+        <div>IMC: <span class="font-bold text-emerald-300">${imc} kg/m²</span></div>
+      </div>`;
 
-      document.getElementById('tmb').innerText = tmb;
-      document.getElementById('gedt').innerText = gedt;
-      document.getElementById('imc').innerText = imc;
-      document.getElementById('nutTmb').innerText = tmb;
-      document.getElementById('nutGedt').innerText = gedt;
-
-      let consell = '';
-      if(imc < 18.5) consell = 'Pes insuficient. Considera augmentar ingesta calòrica.';
-      else if(imc < 25) consell = 'Pes normal. Mantén una dieta equilibrada.';
-      else if(imc < 30) consell = 'Sobrepès. Considera exercici regular i deficit calòric moderat.';
-      else consell = 'Obesitat. Consulta amb un professional sanitari.';
-      document.getElementById('conseill').innerText = consell;
-    }
-
-    function calcularNutricio() {
-      const pes = parseFloat(document.getElementById('perfilPeso').value);
-      const altura = parseFloat(document.getElementById('perfilAltura').value);
-      const edad = parseFloat(document.getElementById('perfilEdat').value);
-      const genero = document.getElementById('perfilGenero').value;
-      const actividad = parseFloat(document.getElementById('perfilActividad').value);
-      const objetivo = document.getElementById('nutObjetivo').value;
-
-      if(!pes || !altura || !edad) {
-        alert('Primer calcula les dades del perfil');
-        return;
-      }
-
-      let tmb = (genero === 'Masculí') 
-        ? (88.362 + (13.397 * pes) + (4.799 * altura) - (5.677 * edad))
-        : (447.593 + (9.247 * pes) + (3.098 * altura) - (4.330 * edad));
-      
-      let gedt = Math.round(tmb * actividad);
-      let caloricaFinal = gedt;
-
-      if(objetivo === 'perdre') caloricaFinal -= 350;
-      else if(objetivo === 'definir') caloricaFinal -= 200;
-
-      if(caloricaFinal < 1200) caloricaFinal = 1200;
-
-      let proteines = Math.round(pes * 1.2);
-      let greixos = Math.round((caloricaFinal * 0.3) / 9);
-      let carbs = Math.round((caloricaFinal - (proteines * 4) - (greixos * 9)) / 4);
-
-      let protPerc = Math.round((proteines * 4 / caloricaFinal) * 100);
-      let carbsPerc = Math.round((carbs * 4 / caloricaFinal) * 100);
-      let greixosPerc = Math.round((greixos * 9 / caloricaFinal) * 100);
-
-      document.getElementById('nutObjetiuCalorico').innerText = caloricaFinal;
-      document.getElementById('nutProteines').innerText = proteines;
-      document.getElementById('nutCarbs').innerText = carbs;
-      document.getElementById('nutGreixos').innerText = greixos;
-      document.getElementById('nutProteinesPorc').innerText = protPerc;
-      document.getElementById('nutCarbsPorc').innerText = carbsPerc;
-      document.getElementById('nutGreixosPerc').innerText = greixosPerc;
-    }
-
-    function toggleDia(dia) {
-      if(diasSeleccionats.has(dia)) {
-        diasSeleccionats.delete(dia);
-      } else {
-        diasSeleccionats.add(dia);
-      }
+      document.getElementById('resultPerfil').innerHTML = html;
     }
 
     function generarRutina() {
-      const nivel = document.getElementById('entrenNivel').value;
-      const minutos = parseInt(document.getElementById('entrenMinutos').value);
+      const nivel = document.getElementById('nivel').value;
+      const exercicis = {
+        'Principiant': ['Flexions assegudes', 'Elevació genolls', 'Estiraments', 'Plank suau'],
+        'Intermedi': ['Sentadilles', 'Flexions normales', 'Plank 30s', 'Estocades'],
+        'Avançat': ['Flexions una mà', 'Sentadilles jump', 'Burpees', 'Mountain climbers']
+      };
 
-      const rutina = exercicis[nivel] || exercicis.Principiant;
-      let html = `<div class="space-y-4">
-        <div class="bg-emerald-900/40 p-4 rounded-2xl text-center">
-          <h2 class="text-2xl font-bold">RUTINA ADAPTADA · ${nivel}</h2>
-          <div class="flex gap-2 justify-center mt-2 flex-wrap">
-            <span class="bg-black/50 px-3 py-1 rounded-full text-xs">⏱️ ${minutos} min</span>
-            <span class="bg-black/50 px-3 py-1 rounded-full text-xs">📅 ${diasSeleccionats.size > 0 ? Array.from(diasSeleccionats).join(', ') : 'Tria dies'}</span>
-          </div>
-        </div>
-        <div class="space-y-3">`;
+      let html = exercicis[nivel].map((ex, i) => 
+        `<div class="p-3 bg-slate-700/50 rounded-lg">
+          <span class="font-bold text-emerald-300">${i+1}. ${ex}</span>
+        </div>`
+      ).join('');
 
-      rutina.forEach((ex, i) => {
-        html += `<div class="bg-slate-800/50 rounded-xl p-4 flex justify-between items-center">
-          <div>
-            <h4 class="font-bold text-lg">🏋️ ${ex.nom}</h4>
-            <div class="flex gap-3 text-xs mt-1">
-              <span class="bg-emerald-900/60 px-2 py-0.5 rounded-full">📊 ${ex.series}</span>
-              <span class="bg-cyan-900/60 px-2 py-0.5 rounded-full">⏱️ ${ex.temps}s</span>
-              <span class="bg-amber-900/60 px-2 py-0.5 rounded-full">💪 ${ex.descans}s descans</span>
-            </div>
-          </div>
-          <button onclick="mostrarModalTimer(${ex.temps}, '${ex.nom.replace(/'/g, "\\'")}')" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-sm font-bold">⏲️ Timer</button>
-        </div>`;
-      });
-
-      html += `</div></div>`;
-      document.getElementById('resultatRutina').innerHTML = html;
+      document.getElementById('resultRutina').innerHTML = html;
     }
 
-    function actualitzarPlanificacio() {
-      alert('✅ Planificació actualitzada!');
-    }
-
-    function mostrarModalTimer(segons, nom) {
-      tempsRestant = segons;
-      duradaTotalSegons = segons;
-      document.getElementById('modalExerciciNom').innerText = nom;
-      document.getElementById('timerSegons').innerText = segons;
-      document.getElementById('modalTimer').classList.remove('hidden');
-      timerPausat = false;
-      if(timerInterval) clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        if(timerPausat) return;
-        if(tempsRestant <= 0) {
-          clearInterval(timerInterval);
-          document.getElementById('modalTimer').classList.add('hidden');
-        } else {
-          tempsRestant--;
-          document.getElementById('timerSegons').innerText = tempsRestant;
-        }
-      }, 1000);
-    }
-
-    function pausarTimer() {
-      timerPausat = !timerPausat;
-    }
-
-    function tancarModalTimer() {
-      if(timerInterval) clearInterval(timerInterval);
-      document.getElementById('modalTimer').classList.add('hidden');
-    }
-
-    // ==================== CÀMERA IA MEJORADA ====================
-    async function initPoseDetection() {
-      try {
-        if(typeof poseDetection === 'undefined') {
-          setTimeout(initPoseDetection, 500);
-          return;
-        }
-        const detectorConfig = { 
-          modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-          enableSmoothing: true
-        };
-        poseDetector = await poseDetection.createDetector(
-          poseDetection.SupportedModels.MoveNet, 
-          detectorConfig
-        );
-        console.log('✅ Pose Detector inicialitzat (THUNDER model)');
-      } catch(e) {
-        console.error('Error inicialitzant pose detection:', e);
-        setTimeout(initPoseDetection, 1000);
+    function calcularNutricio() {
+      const peso = parseFloat(document.getElementById('peso').value);
+      if(!peso) {
+        alert('Primer completa el perfil');
+        return;
       }
+
+      let proteines = Math.round(peso * 1.2);
+      let html = `<div class="bg-emerald-900/40 p-4 rounded-xl">
+        <h3 class="font-bold text-lg text-emerald-300">🍽️ Pla nutricional:</h3>
+        <div class="mt-2 space-y-1">
+          <div>Proteïnes: <span class="font-bold text-emerald-300">${proteines}g</span></div>
+          <div>Caloriques: <span class="font-bold text-emerald-300">2000-2500 kcal/dia</span></div>
+        </div>
+      </div>`;
+
+      document.getElementById('resultNutricio').innerHTML = html;
     }
 
-    async function startCamera() {
+    // ================== CÀMERA SIMPLIFICADA ==================
+    async function initCamera() {
+      videoElement = document.getElementById('video');
+      
       try {
-        if(cameraStream) stopCamera();
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: "user" 
-          },
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480, facingMode: 'user' },
           audio: false
         });
-        cameraStream = stream;
-        videoElem.srcObject = stream;
-        
-        videoElem.onloadedmetadata = () => {
-          videoElem.play();
-          canvasCtx = canvasElem.getContext('2d');
-          canvasElem.width = videoElem.videoWidth;
-          canvasElem.height = videoElem.videoHeight;
-          
-          if(!poseDetector) {
-            initPoseDetection().then(() => detectPoseLoop());
-          } else {
-            detectPoseLoop();
-          }
-        };
-        
-        document.getElementById('postureMessage').innerHTML = '✅ Càmera activa - Analitzant...';
+        videoElement.srcObject = stream;
+        document.getElementById('loading').style.display = 'none';
       } catch(err) {
-        console.error('Error càmera:', err);
-        alert('❌ Permet l\'accés a la càmera. Comprova els permisos del navegador.');
-        document.getElementById('postureMessage').innerHTML = '❌ Error d\'accés a la càmera';
+        alert('❌ Permet accés a la càmera');
+        document.getElementById('status').innerHTML = '❌ Error càmera';
       }
     }
 
-    function stopCamera() {
-      if(cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
+    async function startDetection() {
+      if(!videoElement || !videoElement.srcObject) {
+        await initCamera();
       }
-      if(animationId) cancelAnimationFrame(animationId);
-      videoElem.srcObject = null;
-      if(canvasCtx) canvasCtx.clearRect(0, 0, canvasElem.width, canvasElem.height);
-      document.getElementById('postureMessage').innerHTML = 'Càmera aturada';
-      document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-gray-500';
-      document.getElementById('movimentsDetectats').innerHTML = '<div class="text-slate-500">Esperant moviments...</div>';
+
+      isDetecting = true;
+      document.getElementById('status').innerHTML = '🟢 Detectant...';
+
+      const pose = new Pose({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162/` + file
+      });
+
+      pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: false,
+        smoothSegmentation: false,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+
+      pose.onResults(analyzeResults);
+
+      const camera = new Camera(videoElement, {
+        onFrame: async () => {
+          if(isDetecting) {
+            await pose.send({image: videoElement});
+          }
+        },
+        width: 640,
+        height: 480
+      });
+
+      camera.start();
     }
 
-    async function detectPoseLoop() {
-      if(!poseDetector || !videoElem || videoElem.readyState < 2) {
-        animationId = requestAnimationFrame(detectPoseLoop);
+    function stopDetection() {
+      isDetecting = false;
+      document.getElementById('status').innerHTML = '⏹️ Aturat';
+      if(videoElement && videoElement.srcObject) {
+        videoElement.srcObject.getTracks().forEach(t => t.stop());
+      }
+    }
+
+    function analyzeResults(results) {
+      if(!results.poseLandmarks || results.poseLandmarks.length === 0) {
+        document.getElementById('status').innerHTML = '🔄 Buscant cos...';
         return;
       }
-      
-      try {
-        const poses = await poseDetector.estimatePoses(videoElem, { flipHorizontal: true });
-        
-        if(canvasCtx) {
-          canvasCtx.clearRect(0, 0, canvasElem.width, canvasElem.height);
-          canvasCtx.drawImage(videoElem, 0, 0, canvasElem.width, canvasElem.height);
-          
-          if(poses && poses.length > 0 && poses[0].keypoints) {
-            const keypoints = poses[0].keypoints;
-            drawPose(keypoints);
-            analyzePosture(keypoints);
-            detectMovements(keypoints);
-          } else {
-            resetPostureIndicators();
-          }
-        }
-      } catch(e) {
-        console.error('Error detectant pose:', e);
-      }
-      
-      frameCount++;
-      animationId = requestAnimationFrame(detectPoseLoop);
-    }
 
-    function drawPose(keypoints) {
-      const minConfidence = 0.3;
-      const adjacentKeyPoints = [
-        [[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16],[0,1],[0,2],[1,3],[2,4]],
-        [[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16],[0,1],[0,2],[1,3],[2,4]]
-      ];
+      const landmarks = results.poseLandmarks;
 
-      // Dibujar líneas
-      canvasCtx.strokeStyle = '#10b981';
-      canvasCtx.lineWidth = 3;
-      canvasCtx.fillStyle = '#10b981';
+      // Obtener puntos clave (indices según MediaPipe Pose)
+      const nose = landmarks[0];
+      const leftShoulder = landmarks[11];
+      const rightShoulder = landmarks[12];
+      const leftHip = landmarks[23];
+      const rightHip = landmarks[24];
+      const leftKnee = landmarks[25];
+      const rightKnee = landmarks[26];
 
-      for (let i = 0; i < adjacentKeyPoints[0].length; i++) {
-        const [a, b] = adjacentKeyPoints[0][i];
-        const kp1 = keypoints[a];
-        const kp2 = keypoints[b];
+      let issues = [];
 
-        if (kp1.score > minConfidence && kp2.score > minConfidence) {
-          canvasCtx.beginPath();
-          canvasCtx.moveTo(kp1.x, kp1.y);
-          canvasCtx.lineTo(kp2.x, kp2.y);
-          canvasCtx.stroke();
-        }
-      }
-
-      // Dibujar puntos
-      for (let i = 0; i < keypoints.length; i++) {
-        const kp = keypoints[i];
-        if (kp.score > minConfidence) {
-          const radius = 5;
-          canvasCtx.fillStyle = kp.score > 0.6 ? '#10b981' : '#fbbf24';
-          canvasCtx.beginPath();
-          canvasCtx.arc(kp.x, kp.y, radius, 0, 2 * Math.PI);
-          canvasCtx.fill();
-        }
-      }
-    }
-
-    function analyzePosture(keypoints) {
-      const getKeypoint = (name) => {
-        const nameToIndex = {
-          'nose': 0, 'left_eye': 1, 'right_eye': 2, 'left_ear': 3, 'right_ear': 4,
-          'left_shoulder': 5, 'right_shoulder': 6, 'left_elbow': 7, 'right_elbow': 8,
-          'left_wrist': 9, 'right_wrist': 10, 'left_hip': 11, 'right_hip': 12,
-          'left_knee': 13, 'right_knee': 14, 'left_ankle': 15, 'right_ankle': 16
-        };
-        const idx = nameToIndex[name];
-        return keypoints[idx] && keypoints[idx].score > 0.3 ? keypoints[idx] : null;
-      };
-
-      const nose = getKeypoint('nose');
-      const leftSh = getKeypoint('left_shoulder');
-      const rightSh = getKeypoint('right_shoulder');
-      const leftHip = getKeypoint('left_hip');
-      const rightHip = getKeypoint('right_hip');
-      const leftKnee = getKeypoint('left_knee');
-      const rightKnee = getKeypoint('right_knee');
-
-      let bad = 0;
-      let messages = [];
-      let headMsg = '✅', shMsg = '✅', hipMsg = '✅', legsMsg = '✅';
-
-      // Análisis de cabeza
-      if(nose && leftSh && rightSh) {
-        const midY = (leftSh.y + rightSh.y) / 2;
-        if(nose.y > midY + 30) {
-          headMsg = '⚠️ Cap endavant';
-          messages.push('📍 Cap molt endavant - Estira el coll');
-          bad++;
-        } else if(nose.y < midY - 20) {
-          headMsg = '⚠️ Cap endarrere';
-          messages.push('📍 Cap endarrere - Relaxa');
-          bad++;
+      // Analizar cabeza
+      if(nose && leftShoulder && rightShoulder) {
+        const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+        if(nose.y > midShoulderY + 0.15) {
+          document.getElementById('headPose').innerHTML = '⚠️ Endavant';
+          issues.push('Cap');
         } else {
-          headMsg = '✅ Alineat';
+          document.getElementById('headPose').innerHTML = '✅ Bé';
         }
       }
 
-      // Análisis de hombros
-      if(leftSh && rightSh) {
-        const diff = Math.abs(leftSh.y - rightSh.y);
-        if(diff > 25) {
-          shMsg = '⚠️ Desequilibrades';
-          messages.push('📍 Espatlles desiguals - Nivela\'ls');
-          bad++;
+      // Analizar hombros
+      if(leftShoulder && rightShoulder) {
+        const diff = Math.abs(leftShoulder.y - rightShoulder.y);
+        if(diff > 0.05) {
+          document.getElementById('shouldersPose').innerHTML = '⚠️ Desiguals';
+          issues.push('Espatlles');
         } else {
-          shMsg = '✅ Alineades';
+          document.getElementById('shouldersPose').innerHTML = '✅ Alineades';
         }
       }
 
-      // Análisis de caderas
+      // Analizar cadera
       if(leftHip && rightHip) {
         const diff = Math.abs(leftHip.y - rightHip.y);
-        if(diff > 25) {
-          hipMsg = '⚠️ Desequilibrada';
-          messages.push('📍 Cadera desequilibrada');
-          bad++;
+        if(diff > 0.05) {
+          document.getElementById('hipPose').innerHTML = '⚠️ Desequilibrada';
+          issues.push('Cadera');
         } else {
-          hipMsg = '✅ Nivellada';
+          document.getElementById('hipPose').innerHTML = '✅ Nivellada';
         }
       }
 
-      // Análisis de piernas
+      // Analizar piernas
       if(leftKnee && rightKnee && leftHip && rightHip) {
-        const leftAngle = calculateAngle(leftHip, leftKnee, getKeypoint('left_ankle'));
-        const rightAngle = calculateAngle(rightHip, rightKnee, getKeypoint('right_ankle'));
-        
-        if(leftAngle && leftAngle < 60) {
-          legsMsg = '⚠️ Cames tensades';
-          messages.push('📍 Cames massa tensades - Relaxa');
-          bad++;
-        } else {
-          legsMsg = '✅ Correctes';
-        }
+        document.getElementById('legsPose').innerHTML = '✅ Correctes';
       }
 
-      // Actualizar UI
-      if(bad >= 2) {
-        document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-red-500 animate-pulse';
-        document.getElementById('postureMessage').innerHTML = '🔴 Corregeix postura!';
-      } else if(bad === 1) {
-        document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-yellow-500';
-        document.getElementById('postureMessage').innerHTML = '🟡 Millora la postura';
+      // Status general
+      if(issues.length === 0) {
+        document.getElementById('status').innerHTML = '🟢 Postura PERFECTA!';
+      } else if(issues.length <= 2) {
+        document.getElementById('status').innerHTML = `🟡 Millora: ${issues.join(', ')}`;
       } else {
-        document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-green-500';
-        document.getElementById('postureMessage').innerHTML = '🟢 Postura excel·lent!';
-      }
-
-      document.getElementById('headStatus').innerHTML = headMsg;
-      document.getElementById('shouldersStatus').innerHTML = shMsg;
-      document.getElementById('hipStatus').innerHTML = hipMsg;
-      document.getElementById('legsStatus').innerHTML = legsMsg;
-      document.getElementById('confidenceScore').innerHTML = Math.round((1 - bad/4) * 100) + '%';
-
-      // Mostrar mensajes
-      if(messages.length > 0) {
-        let html = messages.map(m => `<div class="movement-indicator movement-active">${m}</div>`).join('');
-        document.getElementById('movimentsDetectats').innerHTML = html;
+        document.getElementById('status').innerHTML = `🔴 Corregeix: ${issues.join(', ')}`;
       }
     }
 
-    function detectMovements(keypoints) {
-      const getKeypoint = (name) => {
-        const nameToIndex = {
-          'left_shoulder': 5, 'right_shoulder': 6, 'left_elbow': 7, 'right_elbow': 8,
-          'left_wrist': 9, 'right_wrist': 10, 'left_hip': 11, 'right_hip': 12,
-          'left_knee': 13, 'right_knee': 14, 'left_ankle': 15, 'right_ankle': 16
-        };
-        const idx = nameToIndex[name];
-        return keypoints[idx] && keypoints[idx].score > 0.3 ? keypoints[idx] : null;
-      };
-
-      if(!previousKeypoints) {
-        previousKeypoints = keypoints;
-        return;
-      }
-
-      let movements = [];
-      const threshold = 15;
-
-      // Detectar braços levantats
-      const leftWrist = getKeypoint('left_wrist');
-      const rightWrist = getKeypoint('right_wrist');
-      const leftShoulder = getKeypoint('left_shoulder');
-      const rightShoulder = getKeypoint('right_shoulder');
-
-      if(leftWrist && leftShoulder && leftWrist.y < leftShoulder.y - 50) {
-        movements.push('💪 Braç esquerre elevat');
-      }
-      if(rightWrist && rightShoulder && rightWrist.y < rightShoulder.y - 50) {
-        movements.push('💪 Braç dret elevat');
-      }
-
-      // Detectar flexió de cames
-      const leftKnee = getKeypoint('left_knee');
-      const rightKnee = getKeypoint('right_knee');
-      const leftHip = getKeypoint('left_hip');
-      const rightHip = getKeypoint('right_hip');
-
-      if(leftKnee && leftHip && leftKnee.y > leftHip.y + 30) {
-        movements.push('🦵 Flexió cama esquerra');
-      }
-      if(rightKnee && rightHip && rightKnee.y > rightHip.y + 30) {
-        movements.push('🦵 Flexió cama dreta');
-      }
-
-      if(movements.length > 0 && frameCount % 10 === 0) {
-        let html = movements.map(m => `<div class="movement-indicator movement-active">${m}</div>`).join('');
-        document.getElementById('movimentsDetectats').innerHTML = html;
-      }
-
-      previousKeypoints = keypoints;
-    }
-
-    function calculateAngle(a, b, c) {
-      if(!a || !b || !c) return null;
-      
-      const angle = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-      return Math.abs(angle) * 180 / Math.PI;
-    }
-
-    function resetPostureIndicators() {
-      document.getElementById('headStatus').innerHTML = '—';
-      document.getElementById('shouldersStatus').innerHTML = '—';
-      document.getElementById('hipStatus').innerHTML = '—';
-      document.getElementById('legsStatus').innerHTML = '—';
-      document.getElementById('postureMessage').innerHTML = '🔄 Buscant cos...';
-      document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-gray-500 animate-pulse';
-      document.getElementById('confidenceScore').innerHTML = '0%';
-    }
-
-    // ==================== INICIALITZACIÓ ====================
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('startCameraBtn').addEventListener('click', startCamera);
-      document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
-      
-      // Cargar pose detection
-      setTimeout(() => initPoseDetection(), 1000);
-    });
-
-    // Exportar funciones globales
+    // Exportar funciones
     window.canviarTab = canviarTab;
-    window.calcularDadesPersonals = calcularDadesPersonals;
-    window.calcularNutricio = calcularNutricio;
-    window.toggleDia = toggleDia;
+    window.calcularPerfil = calcularPerfil;
     window.generarRutina = generarRutina;
-    window.actualitzarPlanificacio = actualitzarPlanificacio;
-    window.mostrarModalTimer = mostrarModalTimer;
-    window.pausarTimer = pausarTimer;
-    window.tancarModalTimer = tancarModalTimer;
+    window.calcularNutricio = calcularNutricio;
+    window.initCamera = initCamera;
+    window.startDetection = startDetection;
+    window.stopDetection = stopDetection;
   </script>
 </body>
 </html>
