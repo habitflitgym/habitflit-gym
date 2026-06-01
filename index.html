@@ -4,409 +4,799 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#10b981" />
-  <meta name="description" content="HABITFIT PRO - Entrenador de fitness adaptat a tota edat amb sensor postural IA" />
+  <meta name="description" content="HABITFIT PRO - App completa de fitness amb IA, nutrició i seguiment científic" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="HABITFIT PRO" />
-  <title>🏋️ HABITFIT PRO</title>
+  <title>🏋️ HABITFIT PRO - Entrenador Professional</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.5.1635988162"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.5.1635988162"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap');
     * { font-family: 'Inter', sans-serif; }
     body { background: radial-gradient(circle at 10% 20%, #0a0f1e, #0a0a1a); color: white; min-height: 100vh; }
     .glass { background: rgba(10, 20, 30, 0.65); backdrop-filter: blur(16px); border: 1px solid rgba(16, 185, 129, 0.3); }
-    .tab-active { background: linear-gradient(135deg, #10b981, #059669); color: white; border-bottom: 2px solid #10b981; }
-    .tab-inactive { background: rgba(30, 41, 59, 0.7); color: #94a3b8; }
-    .btn-premium { background: linear-gradient(135deg, #10b981, #059669, #06b6d4); background-size: 200%; transition: all 0.3s; }
+    .tab-active { background: linear-gradient(135deg, #10b981, #059669); color: white; border-bottom: 3px solid #10b981; }
+    .tab-inactive { background: rgba(30, 41, 59, 0.7); color: #94a3b8; cursor: pointer; }
+    .btn-premium { background: linear-gradient(135deg, #10b981, #059669, #06b6d4); background-size: 200%; transition: all 0.3s; cursor: pointer; }
     .btn-premium:hover { background-position: 100%; transform: translateY(-2px); box-shadow: 0 15px 30px -10px #10b981; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
-    #cameraPreview { transform: scaleX(-1); }
+    .btn-secondary { background: rgba(71, 85, 105, 0.7); color: white; transition: all 0.3s; cursor: pointer; }
+    .btn-secondary:hover { background: rgba(100, 116, 139, 0.9); }
+    input, select, textarea { color: white; }
+    input::placeholder, textarea::placeholder { color: #94a3b8; }
+    .input-field { width: 100%; padding: 12px; border-radius: 8px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .badge-green { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    .badge-yellow { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+    .badge-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .progress-bar { width: 100%; height: 8px; background: rgba(30, 41, 59, 0.8); border-radius: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #06b6d4); transition: width 0.3s; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: slideIn 0.3s ease-out; }
   </style>
 </head>
 <body class="p-4 md:p-6">
 
-  <div class="max-w-7xl mx-auto">
-    <div class="text-center mb-5">
-      <div class="inline-flex items-center gap-3 bg-black/30 backdrop-blur rounded-full px-6 py-3 shadow-lg">
-        <span class="text-4xl animate-pulse">🏋️</span>
+<div class="max-w-7xl mx-auto">
+  <!-- HEADER -->
+  <div class="text-center mb-6">
+    <div class="inline-flex items-center gap-3 bg-black/30 backdrop-blur rounded-full px-6 py-3 shadow-lg mb-2">
+      <span class="text-4xl animate-pulse">🏋️</span>
+      <div>
         <span class="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">HABITFIT PRO</span>
-        <span class="text-4xl animate-pulse">🧠</span>
+        <p class="text-xs text-slate-400">Entrenador Personal amb IA</p>
       </div>
-      <p class="text-slate-400 text-sm mt-2">Entrenador Amb IA - Basat en Evidència Científica</p>
+      <span class="text-4xl animate-pulse">💪</span>
     </div>
+  </div>
 
-    <!-- PESTANYES -->
-    <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
-      <button onclick="canviarTab('perfil')" id="tabPerfil" class="tab-active px-5 py-3 rounded-xl font-bold transition">👤 PERFIL</button>
-      <button onclick="canviarTab('entrenament')" id="tabEntrenament" class="tab-inactive px-5 py-3 rounded-xl font-bold transition">🏋️ ENTRENAMENT</button>
-      <button onclick="canviarTab('nutrició')" id="tabNutricio" class="tab-inactive px-5 py-3 rounded-xl font-bold transition">🍎 NUTRICIÓ</button>
-      <button onclick="canviarTab('camara')" id="tabCamara" class="tab-inactive px-5 py-3 rounded-xl font-bold transition">📷 CÀMERA IA</button>
-    </div>
+  <!-- TABS -->
+  <div class="flex gap-2 mb-6 overflow-x-auto pb-2 sticky top-0 bg-black/50 backdrop-blur p-2 rounded-xl">
+    <button onclick="switchTab('perfil')" id="tabPerfil" class="tab-active px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">👤 PERFIL</button>
+    <button onclick="switchTab('entrenament')" id="tabEntrenament" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">🏋️ ENTRENAMENT</button>
+    <button onclick="switchTab('nutrició')" id="tabNutricio" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">🍎 NUTRICIÓ</button>
+    <button onclick="switchTab('seguiment')" id="tabSeguiment" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">📊 SEGUIMENT</button>
+    <button onclick="switchTab('camara')" id="tabCamara" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">📷 CÀMERA</button>
+  </div>
 
-    <!-- PERFIL -->
-    <div id="panelPerfil" class="transition-all">
-      <div class="glass rounded-3xl p-6 mb-4">
-        <h2 class="text-2xl font-bold mb-4 text-emerald-400">📋 Dades personals</h2>
-        <div class="grid md:grid-cols-2 gap-3 mb-4">
-          <input id="edad" type="number" placeholder="📅 Edat" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
-          <select id="genero" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30">
-            <option>Masculí</option><option>Femení</option>
+  <!-- PANEL PERFIL -->
+  <div id="panelPerfil" class="animate-in">
+    <div class="grid lg:grid-cols-2 gap-6 mb-6">
+      <!-- SECCIÓ 1: DADES PERSONALS -->
+      <div class="glass rounded-3xl p-6">
+        <h2 class="text-2xl font-bold text-emerald-400 mb-4">📋 Dades Personals</h2>
+        <div class="space-y-3">
+          <input id="nom" type="text" placeholder="Nom complet" class="input-field" />
+          <div class="grid grid-cols-2 gap-3">
+            <input id="edad" type="number" placeholder="Edat" class="input-field" />
+            <select id="genero" class="input-field">
+              <option>Selecciona gènere</option>
+              <option>Masculí</option>
+              <option>Femení</option>
+              <option>Altres</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <input id="peso" type="number" placeholder="Pes (kg)" class="input-field" />
+            <input id="altura" type="number" placeholder="Alçada (cm)" class="input-field" />
+          </div>
+          <select id="nivelEducativo" class="input-field">
+            <option>Nivell educatiu...</option>
+            <option>Sense experiència</option>
+            <option>Principiant (0-6 mesos)</option>
+            <option>Intermedi (6 mesos - 2 anys)</option>
+            <option>Avançat (2+ anys)</option>
           </select>
-          <input id="peso" type="number" placeholder="⚖️ Pes (kg)" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
-          <input id="altura" type="number" placeholder="📏 Alçada (cm)" class="p-3 rounded-xl bg-slate-800/90 border border-emerald-500/30" />
         </div>
-        <button onclick="calcularPerfil()" class="btn-premium w-full p-3 rounded-xl font-bold">📊 CALCULAR</button>
       </div>
-      <div id="resultPerfil" class="glass rounded-3xl p-6">
-        <div class="text-center text-slate-400">Completa els dades i clica CALCULAR</div>
+
+      <!-- SECCIÓ 2: OBJECTIUS -->
+      <div class="glass rounded-3xl p-6">
+        <h2 class="text-2xl font-bold text-emerald-400 mb-4">🎯 Objectius</h2>
+        <div class="space-y-3">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="objPerdreGreix" class="w-5 h-5 cursor-pointer" />
+            <span>Perdre greix corporal</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="objGanyarMusc" class="w-5 h-5 cursor-pointer" />
+            <span>Guanyar massa muscular</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="objForça" class="w-5 h-5 cursor-pointer" />
+            <span>Augmentar força</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="objResistencia" class="w-5 h-5 cursor-pointer" />
+            <span>Millorar resistència cardiovascular</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="objFlexibilitat" class="w-5 h-5 cursor-pointer" />
+            <span>Flexibilitat i mobilitat</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="objSalut" class="w-5 h-5 cursor-pointer" />
+            <span>Salut general i benestar</span>
+          </label>
+        </div>
       </div>
     </div>
 
-    <!-- ENTRENAMENT -->
-    <div id="panelEntrenament" class="hidden transition-all">
-      <div class="glass rounded-3xl p-6">
-        <h2 class="text-2xl font-bold mb-4">🏋️ Rutina</h2>
-        <div class="grid md:grid-cols-2 gap-3 mb-4">
-          <select id="nivel" class="p-3 rounded-xl bg-slate-800/90"><option>Principiant</option><option>Intermedi</option><option>Avançat</option></select>
-          <input id="minutos" type="number" value="30" placeholder="Minuts" class="p-3 rounded-xl bg-slate-800/90" />
+    <!-- SECCIÓ 3: LESIONS I LIMITACIONS -->
+    <div class="glass rounded-3xl p-6 mb-6">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">🩺 Lesions i Limitacions</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="lesEspatlla" class="w-5 h-5 cursor-pointer" />
+          <span>Problemes d'espatlla</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="lesGenoll" class="w-5 h-5 cursor-pointer" />
+          <span>Problemes de genoll</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="lesEsquena" class="w-5 h-5 cursor-pointer" />
+          <span>Problemes d'esquena</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="lesColl" class="w-5 h-5 cursor-pointer" />
+          <span>Problemes de colze</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="lesCama" class="w-5 h-5 cursor-pointer" />
+          <span>Problemes de cama/peus</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="lesCardiaca" class="w-5 h-5 cursor-pointer" />
+          <span>Condicions cardíaques</span>
+        </label>
+      </div>
+      <textarea id="lesDetails" placeholder="Descriu les teves limitacions amb detall..." class="input-field mt-4" rows="3"></textarea>
+    </div>
+
+    <!-- SECCIÓ 4: EQUIPAMENT DISPONIBLE -->
+    <div class="glass rounded-3xl p-6 mb-6">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">🏠 Equipament Disponible</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipMancuernas" class="w-5 h-5 cursor-pointer" />
+          <span>Mancuernes ajustables</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipBarra" class="w-5 h-5 cursor-pointer" />
+          <span>Barra olímpica</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipBandas" class="w-5 h-5 cursor-pointer" />
+          <span>Bandes de resistència</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipBol" class="w-5 h-5 cursor-pointer" />
+          <span>Medicine ball / kettlebell</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipTRX" class="w-5 h-5 cursor-pointer" />
+          <span>TRX o cordes de suspensió</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipPlataforma" class="w-5 h-5 cursor-pointer" />
+          <span>Plataforma de pes (escala)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipBanc" class="w-5 h-5 cursor-pointer" />
+          <span>Banc ajustable</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipBicicleta" class="w-5 h-5 cursor-pointer" />
+          <span>Bicicleta / cinta de correr</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipColchoneta" class="w-5 h-5 cursor-pointer" />
+          <span>Colchoneta / mat</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="equipSoloEspai" class="w-5 h-5 cursor-pointer" />
+          <span>Solo espai (sense equipament)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- SECCIÓ 5: DISPONIBILITAT -->
+    <div class="glass rounded-3xl p-6 mb-6">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">⏰ Disponibilitat i Preferències</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Dies per setmana disponibles</label>
+          <input id="diesSetmana" type="number" min="1" max="7" placeholder="3-5 dies recomanats" class="input-field" />
         </div>
-        <button onclick="generarRutina()" class="btn-premium w-full p-3 rounded-xl font-bold">✏️ GENERAR RUTINA</button>
-        <div id="resultRutina" class="mt-4 space-y-2 max-h-96 overflow-auto">
-          <div class="text-slate-400 text-center p-4">Clica GENERAR</div>
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Minuts per sessió</label>
+          <select id="minutsSessio" class="input-field">
+            <option>Selecciona durada</option>
+            <option value="20">20 minuts (ràpid)</option>
+            <option value="30">30 minuts (estàndard)</option>
+            <option value="45">45 minuts (complet)</option>
+            <option value="60">60+ minuts (intensiu)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Preferència de tipus d'exercici</label>
+          <select id="tipoExercici" class="input-field">
+            <option>Selecciona preferència</option>
+            <option value="fuerza">Força i potència</option>
+            <option value="hipertrofia">Hipertròfia muscular</option>
+            <option value="cardio">Cardiovascular</option>
+            <option value="funcional">Funcional i mobilitat</option>
+            <option value="mixto">Mixte (completa)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Experiència previa en fitness</label>
+          <select id="experiencia" class="input-field">
+            <option>Sense experiència</option>
+            <option value="principiante">Principiant (menys de 6 mesos)</option>
+            <option value="intermedio">Intermedi (6-24 mesos)</option>
+            <option value="avanzado">Avançat (més de 2 anys)</option>
+          </select>
         </div>
       </div>
     </div>
 
-    <!-- NUTRICIÓ -->
-    <div id="panelNutricio" class="hidden transition-all">
-      <div class="glass rounded-3xl p-6">
-        <h2 class="text-2xl font-bold mb-4">🍎 Nutrició</h2>
-        <button onclick="calcularNutricio()" class="btn-premium w-full p-3 rounded-xl font-bold">🍽️ CALCULAR PLA</button>
-        <div id="resultNutricio" class="mt-4 space-y-2">
-          <div class="text-slate-400 text-center p-4">Primer calcula el perfil</div>
+    <!-- BOTÓ CALCULAR -->
+    <button onclick="calcularPerfil()" class="btn-premium w-full p-4 rounded-xl font-bold text-lg mb-6">
+      ✅ GUARDAR PERFIL I CALCULAR DADES
+    </button>
+
+    <!-- RESULTATS DEL PERFIL -->
+    <div id="resultPerfil" class="glass rounded-3xl p-6 animate-in hidden">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">📊 Tus Métricas</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-slate-700/50 p-4 rounded-lg">
+          <p class="text-slate-400 text-sm">TMB (Metabolisme Basal)</p>
+          <p class="text-3xl font-bold text-emerald-300" id="tmbResult">—</p>
+          <p class="text-xs text-slate-400">kcal/dia</p>
+        </div>
+        <div class="bg-slate-700/50 p-4 rounded-lg">
+          <p class="text-slate-400 text-sm">GEDT (Gasto Energético Total)</p>
+          <p class="text-3xl font-bold text-cyan-300" id="gedtResult">—</p>
+          <p class="text-xs text-slate-400">kcal/dia</p>
+        </div>
+        <div class="bg-slate-700/50 p-4 rounded-lg">
+          <p class="text-slate-400 text-sm">IMC (Índice de Masa Corporal)</p>
+          <p class="text-3xl font-bold text-amber-300" id="imcResult">—</p>
+          <p class="text-xs text-slate-400">kg/m²</p>
+        </div>
+        <div class="bg-slate-700/50 p-4 rounded-lg">
+          <p class="text-slate-400 text-sm">% Greix Corporal (estimat)</p>
+          <p class="text-3xl font-bold text-red-300" id="greixResult">—</p>
+          <p class="text-xs text-slate-400">% estimat</p>
         </div>
       </div>
-    </div>
-
-    <!-- CÀMERA IA - COMPLETAMENTE NUEVA -->
-    <div id="panelCamara" class="hidden transition-all">
-      <div class="glass rounded-3xl p-6">
-        <h2 class="text-2xl font-bold mb-3">📷 Anàlisi de Postura en Temps Real</h2>
-        
-        <div class="grid lg:grid-cols-2 gap-6">
-          <!-- VIDEO -->
-          <div>
-            <div class="relative bg-black rounded-2xl overflow-hidden border-2 border-emerald-500/50 mb-4">
-              <video id="video" width="640" height="480" autoplay playsinline muted style="width:100%; display:block;"></video>
-              <div id="loading" class="absolute inset-0 flex items-center justify-center bg-black/50">
-                <div class="text-center">
-                  <div class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-2"></div>
-                  <p>Carregant model...</p>
-                </div>
-              </div>
-            </div>
-            <div class="flex gap-2">
-              <button onclick="startDetection()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 px-4 py-3 rounded-xl font-bold">🎥 INICIAR</button>
-              <button onclick="stopDetection()" class="flex-1 bg-red-600 hover:bg-red-500 px-4 py-3 rounded-xl font-bold">⏹️ ATURAR</button>
-            </div>
-          </div>
-
-          <!-- ANÁLISIS -->
-          <div class="bg-slate-800/60 rounded-2xl p-5 flex flex-col">
-            <h3 class="text-xl font-bold text-emerald-400 mb-3">🩺 Resultats</h3>
-            
-            <div class="space-y-3 flex-1 overflow-y-auto">
-              <div class="p-3 bg-slate-700/50 rounded-lg">
-                <div class="flex justify-between items-center">
-                  <span class="text-sm">🧠 Cap</span>
-                  <span id="headPose" class="font-bold text-amber-300">—</span>
-                </div>
-              </div>
-              
-              <div class="p-3 bg-slate-700/50 rounded-lg">
-                <div class="flex justify-between items-center">
-                  <span class="text-sm">🦾 Espatlles</span>
-                  <span id="shouldersPose" class="font-bold text-amber-300">—</span>
-                </div>
-              </div>
-              
-              <div class="p-3 bg-slate-700/50 rounded-lg">
-                <div class="flex justify-between items-center">
-                  <span class="text-sm">📐 Cadera</span>
-                  <span id="hipPose" class="font-bold text-amber-300">—</span>
-                </div>
-              </div>
-
-              <div class="p-3 bg-slate-700/50 rounded-lg">
-                <div class="flex justify-between items-center">
-                  <span class="text-sm">🦵 Cames</span>
-                  <span id="legsPose" class="font-bold text-amber-300">—</span>
-                </div>
-              </div>
-
-              <div class="p-3 bg-emerald-900/30 rounded-lg">
-                <span class="text-sm">Status:</span>
-                <div id="status" class="text-sm mt-1 font-bold text-emerald-300">🔄 Esperant...</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6 p-4 bg-slate-800/50 rounded-xl text-sm">
-          <p class="text-cyan-300 font-bold mb-2">ℹ️ Com funciona:</p>
-          <ul class="text-slate-300 space-y-1 text-xs">
-            <li>✓ Clica "INICIAR" i permet accés a la càmera</li>
-            <li>✓ Posiciona't davant de la càmera (cos complet visible)</li>
-            <li>✓ L'IA analizarà la teva postura en temps real</li>
-            <li>✓ Rebràs feedback sobre alineació corporal</li>
-          </ul>
-        </div>
+      <div class="mt-4 p-4 bg-emerald-900/30 rounded-lg">
+        <p class="font-bold text-emerald-300 mb-2">💡 Recomanació personalitzada:</p>
+        <p id="recomanacio" class="text-sm text-slate-300">—</p>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.5.1635988162"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.5.1635988162"></script>
+  <!-- PANEL ENTRENAMENT -->
+  <div id="panelEntrenament" class="hidden animate-in">
+    <div class="glass rounded-3xl p-6 mb-6">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">🏋️ Generador de Rutina Personalitzada</h2>
+      <p class="text-slate-300 mb-4">Es generarà una rutina basada en el teu perfil i disponibilitat</p>
+      
+      <div class="grid md:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Enfocament</label>
+          <select id="enfoque" class="input-field">
+            <option value="fuerza">Força</option>
+            <option value="hipertrofia">Hipertròfia</option>
+            <option value="resistencia">Resistència</option>
+            <option value="equilibrio">Equilibri</option>
+            <option value="funcional">Funcional</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Dias per setmana</label>
+          <input id="diasRutina" type="number" min="1" max="7" value="3" class="input-field" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Durada per sessió (min)</label>
+          <input id="minutosRutina" type="number" min="15" max="120" value="45" class="input-field" />
+        </div>
+      </div>
 
-  <script>
-    let isDetecting = false;
-    let videoElement = null;
-    let canvasCtx = null;
-    const Pose = window.Pose;
-    const DrawingUtils = window.DrawingUtils;
-    const Camera = window.Camera;
+      <button onclick="generarRutina()" class="btn-premium w-full p-4 rounded-xl font-bold">
+        🔄 GENERAR RUTINA ADAPTADA
+      </button>
+    </div>
 
-    function canviarTab(tab) {
-      document.getElementById('panelPerfil').classList.add('hidden');
-      document.getElementById('panelEntrenament').classList.add('hidden');
-      document.getElementById('panelNutricio').classList.add('hidden');
-      document.getElementById('panelCamara').classList.add('hidden');
-      document.querySelectorAll('[id^="tab"]').forEach(b => {
-        b.classList.remove('tab-active');
-        b.classList.add('tab-inactive');
-      });
+    <div id="rutinResultat" class="glass rounded-3xl p-6 animate-in hidden">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">📋 Rutina Generada</h2>
+      <div id="rutinaDetalle"></div>
+      <button onclick="exportarPlan()" class="btn-premium w-full p-3 rounded-xl font-bold mt-4">
+        📥 DESCARREGAR PLA (PDF)
+      </button>
+    </div>
+  </div>
 
-      if(tab === 'perfil') {
-        document.getElementById('panelPerfil').classList.remove('hidden');
-        document.getElementById('tabPerfil').classList.add('tab-active');
-      } else if(tab === 'entrenament') {
-        document.getElementById('panelEntrenament').classList.remove('hidden');
-        document.getElementById('tabEntrenament').classList.add('tab-active');
-      } else if(tab === 'nutrició') {
-        document.getElementById('panelNutricio').classList.remove('hidden');
-        document.getElementById('tabNutricio').classList.add('tab-active');
-      } else if(tab === 'camara') {
-        document.getElementById('panelCamara').classList.remove('hidden');
-        document.getElementById('tabCamara').classList.add('tab-active');
-        setTimeout(() => initCamera(), 500);
-      }
+  <!-- PANEL NUTRICIÓ -->
+  <div id="panelNutricio" class="hidden animate-in">
+    <div class="glass rounded-3xl p-6 mb-6">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">🍎 Pla Nutricional Científic</h2>
+      
+      <div class="grid md:grid-cols-2 gap-4 mb-4">
+        <select id="dietaType" class="input-field">
+          <option value="omnivora">Omnívora (normal)</option>
+          <option value="vegetariana">Vegetariana</option>
+          <option value="vegana">Vegana</option>
+          <option value="cetogenica">Cetogènica</option>
+          <option value="mediterranean">Mediterrània</option>
+        </select>
+        <input id="alergias" type="text" placeholder="Al·lèrgies (opcional)" class="input-field" />
+      </div>
+
+      <button onclick="calcularNutricio()" class="btn-premium w-full p-4 rounded-xl font-bold">
+        🍽️ CALCULAR PLA NUTRICIONAL
+      </button>
+    </div>
+
+    <div id="nutricioResultat" class="glass rounded-3xl p-6 animate-in hidden">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">📊 Tu Plan Nutricional</h2>
+      <div id="planNutricional"></div>
+    </div>
+  </div>
+
+  <!-- PANEL SEGUIMENT -->
+  <div id="panelSeguiment" class="hidden animate-in">
+    <div class="glass rounded-3xl p-6 mb-6">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">📊 Seguiment i Progres</h2>
+      
+      <div class="grid md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Pes actual (kg)</label>
+          <input id="pesoActual" type="number" placeholder="Pes" class="input-field" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-300 mb-2 block">Sessió completada?</label>
+          <label class="flex items-center gap-2 cursor-pointer mt-2">
+            <input type="checkbox" id="sesionCompletada" class="w-5 h-5 cursor-pointer" />
+            <span>Sí, completada avui</span>
+          </label>
+        </div>
+      </div>
+
+      <textarea id="notas" placeholder="Notes sobre la sessió..." class="input-field mb-4" rows="3"></textarea>
+
+      <button onclick="registrarSeguimiento()" class="btn-premium w-full p-4 rounded-xl font-bold">
+        💾 GUARDAR SEGUIMIENTO
+      </button>
+    </div>
+
+    <div id="historialResultat" class="glass rounded-3xl p-6 animate-in hidden">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">📈 Historial</h2>
+      <div id="historialTabla"></div>
+    </div>
+  </div>
+
+  <!-- PANEL CÀMERA -->
+  <div id="panelCamara" class="hidden animate-in">
+    <div class="glass rounded-3xl p-6">
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">📷 Anàlisis de Postura (IA)</h2>
+      
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div>
+          <video id="video" width="640" height="480" autoplay playsinline muted class="w-full rounded-xl border-2 border-emerald-500/50 mb-4"></video>
+          <div class="flex gap-2">
+            <button onclick="startCamera()" class="flex-1 btn-premium p-3 rounded-xl font-bold">🎥 INICIAR</button>
+            <button onclick="stopCamera()" class="flex-1 btn-secondary p-3 rounded-xl font-bold">⏹️ ATURAR</button>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/60 rounded-2xl p-5">
+          <h3 class="text-xl font-bold text-emerald-400 mb-4">🩺 Análisis</h3>
+          <div class="space-y-3">
+            <div class="p-3 bg-slate-700/50 rounded-lg">
+              <div class="flex justify-between">
+                <span class="text-sm">🧠 Cap</span>
+                <span id="headStatus" class="font-bold text-amber-300">—</span>
+              </div>
+            </div>
+            <div class="p-3 bg-slate-700/50 rounded-lg">
+              <div class="flex justify-between">
+                <span class="text-sm">🦾 Espatlles</span>
+                <span id="shoulderStatus" class="font-bold text-amber-300">—</span>
+              </div>
+            </div>
+            <div class="p-3 bg-slate-700/50 rounded-lg">
+              <div class="flex justify-between">
+                <span class="text-sm">📐 Cadera</span>
+                <span id="hipStatus" class="font-bold text-amber-300">—</span>
+              </div>
+            </div>
+            <div class="p-3 bg-slate-700/50 rounded-lg">
+              <div class="flex justify-between">
+                <span class="text-sm">🦵 Cames</span>
+                <span id="legStatus" class="font-bold text-amber-300">—</span>
+              </div>
+            </div>
+            <div class="p-3 bg-emerald-900/30 rounded-lg">
+              <p class="text-sm font-bold text-emerald-300" id="cameraStatus">🔄 Esperant...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.5.1635988162"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.5.1635988162"></script>
+
+<script>
+  let userProfile = {};
+  let historialSeguimiento = JSON.parse(localStorage.getItem('habitfit_historial')) || [];
+  let isDetecting = false;
+
+  function switchTab(tab) {
+    document.querySelectorAll('[id^="panel"]').forEach(p => p.classList.add('hidden'));
+    document.querySelectorAll('[id^="tab"]').forEach(t => {
+      t.classList.remove('tab-active');
+      t.classList.add('tab-inactive');
+    });
+
+    document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('tab-active');
+
+    if(tab === 'camara') setTimeout(() => initCamera(), 500);
+  }
+
+  function calcularPerfil() {
+    const peso = parseFloat(document.getElementById('peso').value);
+    const altura = parseFloat(document.getElementById('altura').value);
+    const edad = parseFloat(document.getElementById('edad').value);
+    const genero = document.getElementById('genero').value;
+
+    if(!peso || !altura || !edad || genero === 'Selecciona gènere') {
+      alert('⚠️ Omple tots els camps obligatoris');
+      return;
     }
 
-    function calcularPerfil() {
-      const peso = parseFloat(document.getElementById('peso').value);
-      const altura = parseFloat(document.getElementById('altura').value);
-      const edad = parseFloat(document.getElementById('edad').value);
-      const genero = document.getElementById('genero').value;
+    // Calcular TMB (Mifflin-St Jeor)
+    let tmb = (genero === 'Masculí')
+      ? (88.362 + (13.397 * peso) + (4.799 * altura) - (5.677 * edad))
+      : (447.593 + (9.247 * peso) + (3.098 * altura) - (4.330 * edad));
+    tmb = Math.round(tmb);
 
-      if(!peso || !altura || !edad) {
-        alert('Omple tots els camps');
-        return;
-      }
+    let gedt = Math.round(tmb * 1.55);
+    let imc = (peso / ((altura/100)**2)).toFixed(1);
+    let greix = (genero === 'Masculí') 
+      ? (1.20 * imc + 0.23 * edad - 16.2).toFixed(1)
+      : (1.20 * imc + 0.23 * edad - 5.4).toFixed(1);
 
-      let tmb = (genero === 'Masculí')
-        ? (88.362 + (13.397 * peso) + (4.799 * altura) - (5.677 * edad))
-        : (447.593 + (9.247 * peso) + (3.098 * altura) - (4.330 * edad));
-      tmb = Math.round(tmb);
-      let gedt = Math.round(tmb * 1.55);
-      let imc = (peso / ((altura/100)**2)).toFixed(1);
+    userProfile = {
+      nom: document.getElementById('nom').value,
+      peso, altura, edad, genero,
+      tmb, gedt, imc, greix,
+      objetivos: getCheckedValues(['objPerdreGreix', 'objGanyarMusc', 'objForça', 'objResistencia', 'objFlexibilitat', 'objSalut']),
+      lesiones: getCheckedValues(['lesEspatlla', 'lesGenoll', 'lesEsquena', 'lesColl', 'lesCama', 'lesCardiaca']),
+      equipament: getCheckedValues(['equipMancuernas', 'equipBarra', 'equipBandas', 'equipBol', 'equipTRX', 'equipPlataforma', 'equipBanc', 'equipBicicleta', 'equipColchoneta', 'equipSoloEspai']),
+      dies: document.getElementById('diesSetmana').value,
+      minutos: document.getElementById('minutsSessio').value
+    };
 
-      let html = `<div class="bg-emerald-900/40 p-4 rounded-xl space-y-2">
-        <h3 class="font-bold text-lg text-emerald-300">📊 Els teus resultats:</h3>
-        <div>TMB: <span class="font-bold text-emerald-300">${tmb} kcal/dia</span></div>
-        <div>GEDT: <span class="font-bold text-emerald-300">${gedt} kcal/dia</span></div>
-        <div>IMC: <span class="font-bold text-emerald-300">${imc} kg/m²</span></div>
+    localStorage.setItem('habitfit_profile', JSON.stringify(userProfile));
+
+    document.getElementById('tmbResult').innerText = tmb;
+    document.getElementById('gedtResult').innerText = gedt;
+    document.getElementById('imcResult').innerText = imc;
+    document.getElementById('greixResult').innerText = greix;
+
+    let recomanacio = '';
+    if(imc < 18.5) recomanacio = '↗️ Pes insuficient. Incrementa caloriques i proteïna.';
+    else if(imc < 25) recomanacio = '✅ Pes normal. Mantén una dieta equilibrada.';
+    else if(imc < 30) recomanacio = '⚠️ Sobrepès. Deficit calòric de 300-500 kcal.';
+    else recomanacio = '🔴 Obesitat. Consulta professional sanitari.';
+
+    if(userProfile.objetivos.includes('Perdre greix corporal')) {
+      recomanacio += ` Deficit: ${Math.round(gedt - 400)} kcal/dia.`;
+    }
+
+    document.getElementById('recomanacio').innerText = recomanacio;
+    document.getElementById('resultPerfil').classList.remove('hidden');
+  }
+
+  function generarRutina() {
+    if(!userProfile.peso) {
+      alert('⚠️ Primer guarda el perfil');
+      return;
+    }
+
+    const ejercicios = {
+      fuerza: [
+        {nom: 'Sentadilles', series: '4x6', descans: '3 min', equip: ['mancuernas', 'barra']},
+        {nom: 'Flexions', series: '3x8', descans: '2 min', equip: []},
+        {nom: 'Estocades', series: '3x10', descans: '90 seg', equip: ['mancuernas']},
+        {nom: 'Rems', series: '4x6', descans: '3 min', equip: ['barra', 'bandas']},
+        {nom: 'Presa militar', series: '3x8', descans: '2 min', equip: ['mancuernas']}
+      ],
+      hipertrofia: [
+        {nom: 'Press de banca', series: '4x8', descans: '2 min', equip: ['barra', 'banc']},
+        {nom: 'Sentadilles', series: '3x10', descans: '2 min', equip: ['mancuernas', 'barra']},
+        {nom: 'Flexions inclinades', series: '3x12', descans: '90 seg', equip: []},
+        {nom: 'Curl bíceps', series: '3x12', descans: '90 seg', equip: ['mancuernas']},
+        {nom: 'Extensió triceps', series: '3x12', descans: '90 seg', equip: ['mancuernas']}
+      ],
+      resistencia: [
+        {nom: 'Burpees', series: '3x15', descans: '60 seg', equip: []},
+        {nom: 'Mountain climbers', series: '3x20', descans: '60 seg', equip: []},
+        {nom: 'Jumping jacks', series: '3x25', descans: '60 seg', equip: []},
+        {nom: 'Caminada ràpida', series: '15 min', descans: '5 min', equip: []},
+        {nom: 'Correr', series: '20-30 min', descans: 'recuperació', equip: []}
+      ],
+      equilibrio: [
+        {nom: 'Plank', series: '3x45s', descans: '60 seg', equip: []},
+        {nom: 'Side plank', series: '2x30s cada costat', descans: '60 seg', equip: []},
+        {nom: 'Yoga poses', series: '15 min', descans: 'suau', equip: ['colchoneta']},
+        {nom: 'Squats a una cama', series: '3x8 cada cama', descans: '90 seg', equip: []},
+        {nom: 'Estiraments', series: '10 min', descans: 'recuperació', equip: ['colchoneta']}
+      ],
+      funcional: [
+        {nom: 'Kettlebell swings', series: '3x15', descans: '90 seg', equip: ['kettlebell']},
+        {nom: 'TRX rows', series: '3x12', descans: '90 seg', equip: ['TRX']},
+        {nom: 'Medicine ball throws', series: '3x10', descans: '90 seg', equip: ['medicine_ball']},
+        {nom: 'Farmer carries', series: '3x40m', descans: '90 seg', equip: ['mancuernas']},
+        {nom: 'Push-ups', series: '3x12', descans: '90 seg', equip: []}
+      ]
+    };
+
+    const enfoque = document.getElementById('enfoque').value || 'equilibrio';
+    const dias = parseInt(document.getElementById('diasRutina').value) || 3;
+    const minutos = parseInt(document.getElementById('minutosRutina').value) || 45;
+
+    const ejercSelected = ejercicios[enfoque] || ejercicios.equilibrio;
+    const rutina = ejercSelected.slice(0, Math.ceil(dias * minutos / 15));
+
+    let html = `<div class="space-y-4">
+      <div class="bg-emerald-900/30 p-4 rounded-lg">
+        <h3 class="font-bold text-lg text-emerald-300 mb-2">📋 Rutina: ${enfoque.toUpperCase()}</h3>
+        <p class="text-sm text-slate-300">Días: ${dias} | Minutos: ${minutos}</p>
       </div>`;
 
-      document.getElementById('resultPerfil').innerHTML = html;
-    }
-
-    function generarRutina() {
-      const nivel = document.getElementById('nivel').value;
-      const exercicis = {
-        'Principiant': ['Flexions assegudes', 'Elevació genolls', 'Estiraments', 'Plank suau'],
-        'Intermedi': ['Sentadilles', 'Flexions normales', 'Plank 30s', 'Estocades'],
-        'Avançat': ['Flexions una mà', 'Sentadilles jump', 'Burpees', 'Mountain climbers']
-      };
-
-      let html = exercicis[nivel].map((ex, i) => 
-        `<div class="p-3 bg-slate-700/50 rounded-lg">
-          <span class="font-bold text-emerald-300">${i+1}. ${ex}</span>
-        </div>`
-      ).join('');
-
-      document.getElementById('resultRutina').innerHTML = html;
-    }
-
-    function calcularNutricio() {
-      const peso = parseFloat(document.getElementById('peso').value);
-      if(!peso) {
-        alert('Primer completa el perfil');
-        return;
-      }
-
-      let proteines = Math.round(peso * 1.2);
-      let html = `<div class="bg-emerald-900/40 p-4 rounded-xl">
-        <h3 class="font-bold text-lg text-emerald-300">🍽️ Pla nutricional:</h3>
-        <div class="mt-2 space-y-1">
-          <div>Proteïnes: <span class="font-bold text-emerald-300">${proteines}g</span></div>
-          <div>Caloriques: <span class="font-bold text-emerald-300">2000-2500 kcal/dia</span></div>
+    rutina.forEach((ex, i) => {
+      html += `<div class="bg-slate-700/50 p-4 rounded-lg">
+        <h4 class="font-bold text-emerald-300">${i+1}. ${ex.nom}</h4>
+        <div class="flex gap-2 mt-2 flex-wrap">
+          <span class="badge badge-green">📊 ${ex.series}</span>
+          <span class="badge badge-yellow">⏱️ ${ex.descans}</span>
         </div>
       </div>`;
+    });
 
-      document.getElementById('resultNutricio').innerHTML = html;
+    html += `</div>`;
+    document.getElementById('rutinaDetalle').innerHTML = html;
+    document.getElementById('rutinResultat').classList.remove('hidden');
+  }
+
+  function calcularNutricio() {
+    if(!userProfile.peso) {
+      alert('⚠️ Primer guarda el perfil');
+      return;
     }
 
-    // ================== CÀMERA SIMPLIFICADA ==================
-    async function initCamera() {
-      videoElement = document.getElementById('video');
-      
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480, facingMode: 'user' },
-          audio: false
-        });
-        videoElement.srcObject = stream;
-        document.getElementById('loading').style.display = 'none';
-      } catch(err) {
-        alert('❌ Permet accés a la càmera');
-        document.getElementById('status').innerHTML = '❌ Error càmera';
-      }
+    let proteines = Math.round(userProfile.peso * (userProfile.objetivos.includes('Guanyar massa muscular') ? 2 : 1.6));
+    let greix = Math.round((userProfile.gedt * 0.3) / 9);
+    let carbs = Math.round((userProfile.gedt - (proteines * 4) - (greix * 9)) / 4);
+
+    let html = `<div class="space-y-4">
+      <div class="bg-emerald-900/30 p-4 rounded-lg">
+        <h3 class="font-bold text-lg text-emerald-300">⚡ Necessitats Energètiques</h3>
+        <div class="mt-2 space-y-1 text-sm">
+          <div>TMB: <span class="font-bold text-emerald-300">${userProfile.tmb} kcal/dia</span></div>
+          <div>GEDT: <span class="font-bold text-cyan-300">${userProfile.gedt} kcal/dia</span></div>
+        </div>
+      </div>
+
+      <div class="bg-slate-700/50 p-4 rounded-lg">
+        <h3 class="font-bold text-lg text-emerald-300 mb-2">🥗 Macronutrients</h3>
+        <div class="space-y-2 text-sm">
+          <div>Proteïnes: <span class="font-bold text-red-300">${proteines}g</span> (${Math.round((proteines*4/userProfile.gedt)*100)}%)</div>
+          <div>Carbohidrats: <span class="font-bold text-amber-300">${carbs}g</span> (${Math.round((carbs*4/userProfile.gedt)*100)}%)</div>
+          <div>Greixos: <span class="font-bold text-orange-300">${greix}g</span> (${Math.round((greix*9/userProfile.gedt)*100)}%)</div>
+        </div>
+      </div>
+
+      <div class="bg-cyan-900/30 p-4 rounded-lg">
+        <h3 class="font-bold text-cyan-300 mb-2">💧 Hidratació (ACSM)</h3>
+        <ul class="text-xs text-slate-300 space-y-1">
+          <li>Pre-exercici: 5-10 mL/kg (2-4h abans)</li>
+          <li>Durant: 0.4-0.8 L/hora</li>
+          <li>Post: 1.25-1.5 L per kg perdut</li>
+        </ul>
+      </div>
+
+      <div class="bg-yellow-900/30 p-4 rounded-lg">
+        <h3 class="font-bold text-yellow-300 mb-2">💊 Suplements recomanats</h3>
+        <ul class="text-xs text-slate-300 space-y-1">
+          <li>✓ Proteïna de sèrum (post-exercici)</li>
+          <li>✓ Creatina (3-5g/dia)</li>
+          <li>✓ Cafeïna (3-6 mg/kg pre-exercici)</li>
+          <li>✓ Multivitamínic (cobertura nutricional)</li>
+        </ul>
+      </div>
+    </div>`;
+
+    document.getElementById('planNutricional').innerHTML = html;
+    document.getElementById('nutricioResultat').classList.remove('hidden');
+  }
+
+  function registrarSeguimiento() {
+    const peso = parseFloat(document.getElementById('pesoActual').value);
+    const completada = document.getElementById('sesionCompletada').checked;
+    const notas = document.getElementById('notas').value;
+
+    if(!peso) {
+      alert('⚠️ Completa els camps');
+      return;
     }
 
-    async function startDetection() {
-      if(!videoElement || !videoElement.srcObject) {
-        await initCamera();
-      }
+    const registro = {
+      fecha: new Date().toLocaleDateString('ca-ES'),
+      peso,
+      completada,
+      notas
+    };
 
-      isDetecting = true;
-      document.getElementById('status').innerHTML = '🟢 Detectant...';
+    historialSeguimiento.push(registro);
+    localStorage.setItem('habitfit_historial', JSON.stringify(historialSeguimiento));
 
-      const pose = new Pose({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162/` + file
+    let html = '<table class="w-full text-sm"><tr class="border-b border-slate-600"><th class="text-left p-2">Data</th><th>Pes</th><th>Completada</th></tr>';
+    historialSeguimiento.forEach(r => {
+      html += `<tr class="border-b border-slate-700"><td class="p-2">${r.fecha}</td><td>${r.peso}kg</td><td>${r.completada ? '✅' : '❌'}</td></tr>`;
+    });
+    html += '</table>';
+
+    document.getElementById('historialTabla').innerHTML = html;
+    document.getElementById('historialResultat').classList.remove('hidden');
+
+    document.getElementById('pesoActual').value = '';
+    document.getElementById('notas').value = '';
+    alert('✅ Seguimiento guardado');
+  }
+
+  function exportarPlan() {
+    const element = document.getElementById('rutinResultat');
+    const opt = {
+      margin: 10,
+      filename: 'habitfit_plan.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+    };
+    html2pdf().set(opt).from(element).save();
+  }
+
+  async function initCamera() {
+    const video = document.getElementById('video');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480, facingMode: 'user' },
+        audio: false
       });
-
-      pose.setOptions({
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        enableSegmentation: false,
-        smoothSegmentation: false,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-
-      pose.onResults(analyzeResults);
-
-      const camera = new Camera(videoElement, {
-        onFrame: async () => {
-          if(isDetecting) {
-            await pose.send({image: videoElement});
-          }
-        },
-        width: 640,
-        height: 480
-      });
-
-      camera.start();
+      video.srcObject = stream;
+    } catch(err) {
+      alert('❌ Permite acceso a la cámara');
     }
+  }
 
-    function stopDetection() {
-      isDetecting = false;
-      document.getElementById('status').innerHTML = '⏹️ Aturat';
-      if(videoElement && videoElement.srcObject) {
-        videoElement.srcObject.getTracks().forEach(t => t.stop());
-      }
-    }
+  async function startCamera() {
+    isDetecting = true;
+    const video = document.getElementById('video');
+    
+    if(!video.srcObject) await initCamera();
 
-    function analyzeResults(results) {
-      if(!results.poseLandmarks || results.poseLandmarks.length === 0) {
-        document.getElementById('status').innerHTML = '🔄 Buscant cos...';
-        return;
-      }
+    const pose = new Pose({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162/` + file
+    });
 
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    pose.onResults((results) => {
+      if(!results.poseLandmarks) return;
       const landmarks = results.poseLandmarks;
 
-      // Obtener puntos clave (indices según MediaPipe Pose)
       const nose = landmarks[0];
-      const leftShoulder = landmarks[11];
-      const rightShoulder = landmarks[12];
+      const leftSh = landmarks[11];
+      const rightSh = landmarks[12];
       const leftHip = landmarks[23];
       const rightHip = landmarks[24];
-      const leftKnee = landmarks[25];
-      const rightKnee = landmarks[26];
 
       let issues = [];
 
-      // Analizar cabeza
-      if(nose && leftShoulder && rightShoulder) {
-        const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-        if(nose.y > midShoulderY + 0.15) {
-          document.getElementById('headPose').innerHTML = '⚠️ Endavant';
-          issues.push('Cap');
+      if(nose && leftSh && rightSh) {
+        const midY = (leftSh.y + rightSh.y) / 2;
+        if(nose.y > midY + 0.15) {
+          document.getElementById('headStatus').innerHTML = '⚠️ Cap endavant';
+          issues.push('cap');
         } else {
-          document.getElementById('headPose').innerHTML = '✅ Bé';
+          document.getElementById('headStatus').innerHTML = '✅ Bé';
         }
       }
 
-      // Analizar hombros
-      if(leftShoulder && rightShoulder) {
-        const diff = Math.abs(leftShoulder.y - rightShoulder.y);
+      if(leftSh && rightSh) {
+        const diff = Math.abs(leftSh.y - rightSh.y);
         if(diff > 0.05) {
-          document.getElementById('shouldersPose').innerHTML = '⚠️ Desiguals';
-          issues.push('Espatlles');
+          document.getElementById('shoulderStatus').innerHTML = '⚠️ Desiguals';
+          issues.push('espatlles');
         } else {
-          document.getElementById('shouldersPose').innerHTML = '✅ Alineades';
+          document.getElementById('shoulderStatus').innerHTML = '✅ Alineades';
         }
       }
 
-      // Analizar cadera
       if(leftHip && rightHip) {
         const diff = Math.abs(leftHip.y - rightHip.y);
         if(diff > 0.05) {
-          document.getElementById('hipPose').innerHTML = '⚠️ Desequilibrada';
-          issues.push('Cadera');
+          document.getElementById('hipStatus').innerHTML = '⚠️ Desequilibrada';
+          issues.push('cadera');
         } else {
-          document.getElementById('hipPose').innerHTML = '✅ Nivellada';
+          document.getElementById('hipStatus').innerHTML = '✅ Nivellada';
         }
       }
 
-      // Analizar piernas
-      if(leftKnee && rightKnee && leftHip && rightHip) {
-        document.getElementById('legsPose').innerHTML = '✅ Correctes';
-      }
+      document.getElementById('legStatus').innerHTML = '✅ Correctes';
 
-      // Status general
       if(issues.length === 0) {
-        document.getElementById('status').innerHTML = '🟢 Postura PERFECTA!';
-      } else if(issues.length <= 2) {
-        document.getElementById('status').innerHTML = `🟡 Millora: ${issues.join(', ')}`;
+        document.getElementById('cameraStatus').innerHTML = '🟢 Postura perfecta!';
       } else {
-        document.getElementById('status').innerHTML = `🔴 Corregeix: ${issues.join(', ')}`;
+        document.getElementById('cameraStatus').innerHTML = `🟡 Corregeix: ${issues.join(', ')}`;
       }
-    }
+    });
 
-    // Exportar funciones
-    window.canviarTab = canviarTab;
-    window.calcularPerfil = calcularPerfil;
-    window.generarRutina = generarRutina;
-    window.calcularNutricio = calcularNutricio;
-    window.initCamera = initCamera;
-    window.startDetection = startDetection;
-    window.stopDetection = stopDetection;
-  </script>
+    const camera = new Camera(video, {
+      onFrame: async () => {
+        if(isDetecting) await pose.send({image: video});
+      },
+      width: 640,
+      height: 480
+    });
+
+    camera.start();
+  }
+
+  function stopCamera() {
+    isDetecting = false;
+    const video = document.getElementById('video');
+    if(video.srcObject) {
+      video.srcObject.getTracks().forEach(t => t.stop());
+    }
+    document.getElementById('cameraStatus').innerHTML = '⏹️ Aturat';
+  }
+
+  function getCheckedValues(ids) {
+    return ids.filter(id => document.getElementById(id)?.checked).map(id => id.replace('obj', '').replace('les', '').replace('equip', ''));
+  }
+
+  // Cargar perfil guardado
+  window.addEventListener('load', () => {
+    const saved = localStorage.getItem('habitfit_profile');
+    if(saved) {
+      userProfile = JSON.parse(saved);
+      document.getElementById('nom').value = userProfile.nom || '';
+      document.getElementById('peso').value = userProfile.peso || '';
+      document.getElementById('altura').value = userProfile.altura || '';
+      document.getElementById('edad').value = userProfile.edad || '';
+    }
+  });
+</script>
+
 </body>
 </html>
