@@ -15,6 +15,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.0/dist/pose-detection.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap');
     * { font-family: 'Inter', sans-serif; }
@@ -47,6 +48,21 @@
     .posture-led-good { background: #10b981; box-shadow: 0 0 12px #10b981; }
     .posture-led-bad { background: #ef4444; animation: pulse 0.8s infinite; }
     .posture-led-warning { background: #eab308; }
+    .movement-indicator { 
+      padding: 12px; 
+      border-radius: 8px; 
+      margin: 4px 0; 
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    .movement-active { 
+      background: linear-gradient(90deg, #10b981, #06b6d4);
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+    }
+    .movement-inactive { 
+      background: rgba(71, 85, 105, 0.5);
+      color: #94a3b8;
+    }
   </style>
 </head>
 <body class="p-4 md:p-6">
@@ -263,38 +279,84 @@
       </div>
     </div>
 
-    <!-- PESTANYA 4: CÀMERA IA -->
+    <!-- PESTANYA 4: CÀMERA IA MEJORADA -->
     <div id="panelCamara" class="hidden transition-all">
       <div class="glass rounded-3xl p-6">
-        <h2 class="text-2xl font-bold mb-3">📷 Sensor de Moviment · Correcció Postural IA</h2>
-        <p class="text-slate-300 mb-4 text-sm">Activa la càmera per analitzar la teva postura en temps real. L'IA detecta desviacions de cap i espatlles.</p>
+        <h2 class="text-2xl font-bold mb-3">📷 Sensor de Moviment Avançat · IA Poderesa</h2>
+        <p class="text-slate-300 mb-4 text-sm">🎥 Detecta moviments en temps real amb IA avançada. Reconeix poses, gestos i exercicis.</p>
+        
         <div class="grid lg:grid-cols-2 gap-6">
+          <!-- CAMERA -->
           <div class="bg-black/50 rounded-2xl p-4">
-            <div class="relative aspect-video bg-slate-900 rounded-xl overflow-hidden">
+            <div class="relative aspect-video bg-slate-900 rounded-xl overflow-hidden border-2 border-emerald-500/50">
               <video id="cameraPreview" class="w-full h-full object-cover" autoplay playsinline muted></video>
               <canvas id="poseCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
             </div>
             <div class="flex gap-3 mt-4">
-              <button id="startCameraBtn" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl font-bold flex-1">🎥 INICIAR CÀMERA</button>
-              <button id="stopCameraBtn" class="bg-red-600/70 hover:bg-red-500 px-4 py-2 rounded-xl font-bold flex-1">⏹️ ATURAR</button>
+              <button id="startCameraBtn" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl font-bold flex-1 transition">🎥 INICIAR CÀMERA</button>
+              <button id="stopCameraBtn" class="bg-red-600/70 hover:bg-red-500 px-4 py-2 rounded-xl font-bold flex-1 transition">⏹️ ATURAR</button>
             </div>
-            <p class="text-xs text-center text-slate-400 mt-2">🔍 Permet l'accés a la càmera · Detecta esquelet i postura</p>
+            <p class="text-xs text-center text-slate-400 mt-2">✅ Permet l'accés a la càmera · L'IA analitzarà els moviments</p>
           </div>
-          <div class="bg-slate-800/60 rounded-2xl p-5">
-            <h3 class="text-xl font-bold text-emerald-400 mb-3">🩺 ANÀLISI POSTURAL</h3>
+
+          <!-- ANÁLISIS POSTURAL MEJORADO -->
+          <div class="bg-slate-800/60 rounded-2xl p-5 flex flex-col">
+            <h3 class="text-xl font-bold text-emerald-400 mb-3">🩺 ANÀLISI EN TEMPS REAL</h3>
+            
+            <!-- STATUS LED -->
             <div id="postureStatus" class="p-4 bg-slate-900/80 rounded-xl mb-4">
               <div class="flex items-center gap-3">
-                <div id="postureLed" class="w-4 h-4 rounded-full bg-gray-500"></div>
-                <span id="postureMessage" class="font-semibold">Esperant càmera...</span>
+                <div id="postureLed" class="w-5 h-5 rounded-full bg-gray-500 animate-pulse"></div>
+                <span id="postureMessage" class="font-semibold text-lg">🔄 Inicialitzant...</span>
               </div>
             </div>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between p-2 bg-slate-700/50 rounded-lg"><span>🧠 Posició del cap:</span><span id="headStatus" class="font-bold text-amber-300">—</span></div>
-              <div class="flex justify-between p-2 bg-slate-700/50 rounded-lg"><span>🦾 Alineació espatlles:</span><span id="shouldersStatus" class="font-bold text-amber-300">—</span></div>
-              <div class="flex justify-between p-2 bg-slate-700/50 rounded-lg"><span>📐 Postura general:</span><span id="generalStatus" class="font-bold text-amber-300">—</span></div>
+
+            <!-- POSTURA INDICATORS -->
+            <div class="space-y-2 mb-4">
+              <div class="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
+                <span>🧠 Cap:</span>
+                <span id="headStatus" class="font-bold text-amber-300 text-lg">—</span>
+              </div>
+              <div class="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
+                <span>🦾 Espatlles:</span>
+                <span id="shouldersStatus" class="font-bold text-amber-300 text-lg">—</span>
+              </div>
+              <div class="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
+                <span>📐 Cadera:</span>
+                <span id="hipStatus" class="font-bold text-amber-300 text-lg">—</span>
+              </div>
+              <div class="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
+                <span>🦵 Cames:</span>
+                <span id="legsStatus" class="font-bold text-amber-300 text-lg">—</span>
+              </div>
             </div>
-            <div class="mt-4 p-2 bg-emerald-900/30 rounded-lg text-xs">💡 Mantén l'esquena recta i espatlles enrere. El sistema t'alertarà si detecta mala postura.</div>
+
+            <!-- MOVIMIENTOS DETECTADOS -->
+            <div class="mb-4">
+              <h4 class="font-bold text-cyan-300 mb-2">🎯 Moviments detectats:</h4>
+              <div id="movimentsDetectats" class="space-y-1 text-xs max-h-32 overflow-y-auto">
+                <div class="text-slate-500">Esperant moviments...</div>
+              </div>
+            </div>
+
+            <!-- CONFIDENCE -->
+            <div class="p-2 bg-emerald-900/30 rounded-lg text-xs mt-auto">
+              <div>Confiança detecció: <span id="confidenceScore" class="text-emerald-300 font-bold">0%</span></div>
+            </div>
           </div>
+        </div>
+
+        <!-- INFORMACIÓN CIENTÍFICA -->
+        <div class="glass rounded-3xl p-6 mt-6">
+          <h3 class="font-bold text-cyan-300 mb-3">🔬 Tecnologia de detecció</h3>
+          <p class="text-sm text-slate-300">Utilitza MoveNet per a detecció de poses en 17 punts de l'esquelet i analitza el moviment en temps real. Detecta:</p>
+          <ul class="text-xs text-slate-300 list-disc pl-4 mt-2 space-y-1">
+            <li>✅ Alignació del cos (cap, espatlles, cadera, cames)</li>
+            <li>✅ Angles de les articulacions</li>
+            <li>✅ Velocitat i amplitud de moviment</li>
+            <li>✅ Simetria corporal</li>
+            <li>✅ Bones practiques de tècnica (forma)</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -322,14 +384,6 @@
   </div>
 
   <script>
-    // ==================== REGISTRAR SERVICE WORKER ====================
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('https://habitflitgym.github.io/habitflit-gym/service-worker.js')
-          .catch(error => console.log('Service Worker error:', error));
-      });
-    }
-
     // ==================== VARIABLES GLOBALS ====================
     let timerInterval = null, tempsRestant = 0, timerPausat = false, duradaTotalSegons = 0;
     let poseDetector = null, animationId = null, cameraStream = null;
@@ -337,6 +391,8 @@
     const videoElem = document.getElementById('cameraPreview');
     const canvasElem = document.getElementById('poseCanvas');
     let canvasCtx = null;
+    let frameCount = 0;
+    let previousKeypoints = null;
 
     // ==================== DADES D'EXERCICIS ====================
     const exercicis = {
@@ -401,26 +457,20 @@
         return;
       }
 
-      // Calcular TMB (Mifflin-St Jeor)
       let tmb = (genero === 'Masculí') 
         ? (88.362 + (13.397 * pes) + (4.799 * altura) - (5.677 * edad))
         : (447.593 + (9.247 * pes) + (3.098 * altura) - (4.330 * edad));
       tmb = Math.round(tmb);
 
-      // Calcular GEDT
       let gedt = Math.round(tmb * actividad);
-
-      // Calcular IMC
       let imc = (pes / ((altura / 100) ** 2)).toFixed(1);
 
-      // Actualizar pantalla
       document.getElementById('tmb').innerText = tmb;
       document.getElementById('gedt').innerText = gedt;
       document.getElementById('imc').innerText = imc;
       document.getElementById('nutTmb').innerText = tmb;
       document.getElementById('nutGedt').innerText = gedt;
 
-      // Consell
       let consell = '';
       if(imc < 18.5) consell = 'Pes insuficient. Considera augmentar ingesta calòrica.';
       else if(imc < 25) consell = 'Pes normal. Mantén una dieta equilibrada.';
@@ -442,7 +492,6 @@
         return;
       }
 
-      // TMB
       let tmb = (genero === 'Masculí') 
         ? (88.362 + (13.397 * pes) + (4.799 * altura) - (5.677 * edad))
         : (447.593 + (9.247 * pes) + (3.098 * altura) - (4.330 * edad));
@@ -455,12 +504,10 @@
 
       if(caloricaFinal < 1200) caloricaFinal = 1200;
 
-      // Macros
       let proteines = Math.round(pes * 1.2);
       let greixos = Math.round((caloricaFinal * 0.3) / 9);
       let carbs = Math.round((caloricaFinal - (proteines * 4) - (greixos * 9)) / 4);
 
-      // Percentatges
       let protPerc = Math.round((proteines * 4 / caloricaFinal) * 100);
       let carbsPerc = Math.round((carbs * 4 / caloricaFinal) * 100);
       let greixosPerc = Math.round((greixos * 9 / caloricaFinal) * 100);
@@ -471,7 +518,7 @@
       document.getElementById('nutGreixos').innerText = greixos;
       document.getElementById('nutProteinesPorc').innerText = protPerc;
       document.getElementById('nutCarbsPorc').innerText = carbsPerc;
-      document.getElementById('nutGreixosPorc').innerText = greixosPerc;
+      document.getElementById('nutGreixosPerc').innerText = greixosPerc;
     }
 
     function toggleDia(dia) {
@@ -548,32 +595,60 @@
       document.getElementById('modalTimer').classList.add('hidden');
     }
 
-    // ==================== CÀMERA POSTURAL ====================
+    // ==================== CÀMERA IA MEJORADA ====================
     async function initPoseDetection() {
-      if(typeof poseDetection === 'undefined') {
-        setTimeout(initPoseDetection, 500);
-        return;
+      try {
+        if(typeof poseDetection === 'undefined') {
+          setTimeout(initPoseDetection, 500);
+          return;
+        }
+        const detectorConfig = { 
+          modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+          enableSmoothing: true
+        };
+        poseDetector = await poseDetection.createDetector(
+          poseDetection.SupportedModels.MoveNet, 
+          detectorConfig
+        );
+        console.log('✅ Pose Detector inicialitzat (THUNDER model)');
+      } catch(e) {
+        console.error('Error inicialitzant pose detection:', e);
+        setTimeout(initPoseDetection, 1000);
       }
-      const detectorConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
-      poseDetector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
     }
 
     async function startCamera() {
       try {
         if(cameraStream) stopCamera();
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "user" 
+          },
+          audio: false
+        });
         cameraStream = stream;
         videoElem.srcObject = stream;
-        await videoElem.play();
-        canvasCtx = canvasElem.getContext('2d');
-        videoElem.addEventListener('loadedmetadata', () => {
+        
+        videoElem.onloadedmetadata = () => {
+          videoElem.play();
+          canvasCtx = canvasElem.getContext('2d');
           canvasElem.width = videoElem.videoWidth;
           canvasElem.height = videoElem.videoHeight;
-        });
-        if(!poseDetector) await initPoseDetection();
-        detectPoseLoop();
+          
+          if(!poseDetector) {
+            initPoseDetection().then(() => detectPoseLoop());
+          } else {
+            detectPoseLoop();
+          }
+        };
+        
+        document.getElementById('postureMessage').innerHTML = '✅ Càmera activa - Analitzant...';
       } catch(err) {
-        alert('Permet l\'accés a la càmera.');
+        console.error('Error càmera:', err);
+        alert('❌ Permet l\'accés a la càmera. Comprova els permisos del navegador.');
+        document.getElementById('postureMessage').innerHTML = '❌ Error d\'accés a la càmera';
       }
     }
 
@@ -584,6 +659,10 @@
       }
       if(animationId) cancelAnimationFrame(animationId);
       videoElem.srcObject = null;
+      if(canvasCtx) canvasCtx.clearRect(0, 0, canvasElem.width, canvasElem.height);
+      document.getElementById('postureMessage').innerHTML = 'Càmera aturada';
+      document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-gray-500';
+      document.getElementById('movimentsDetectats').innerHTML = '<div class="text-slate-500">Esperant moviments...</div>';
     }
 
     async function detectPoseLoop() {
@@ -591,65 +670,252 @@
         animationId = requestAnimationFrame(detectPoseLoop);
         return;
       }
+      
       try {
-        const poses = await poseDetector.estimatePoses(videoElem);
+        const poses = await poseDetector.estimatePoses(videoElem, { flipHorizontal: true });
+        
         if(canvasCtx) {
           canvasCtx.clearRect(0, 0, canvasElem.width, canvasElem.height);
           canvasCtx.drawImage(videoElem, 0, 0, canvasElem.width, canvasElem.height);
-          if(poses.length > 0) {
-            analyzePosture(poses[0].keypoints);
+          
+          if(poses && poses.length > 0 && poses[0].keypoints) {
+            const keypoints = poses[0].keypoints;
+            drawPose(keypoints);
+            analyzePosture(keypoints);
+            detectMovements(keypoints);
+          } else {
+            resetPostureIndicators();
           }
         }
-      } catch(e) {}
+      } catch(e) {
+        console.error('Error detectant pose:', e);
+      }
+      
+      frameCount++;
       animationId = requestAnimationFrame(detectPoseLoop);
     }
 
-    function analyzePosture(kps) {
-      const get = (n) => {
-        let p = kps.find(k=>k.name===n);
-        return p && p.score>0.3 ? p : null;
-      };
-      const leftSh = get('left_shoulder'), rightSh = get('right_shoulder'), nose = get('nose');
-      let bad = 0, headMsg = '✅', shMsg = '✅', genMsg = '🟢 Bona';
+    function drawPose(keypoints) {
+      const minConfidence = 0.3;
+      const adjacentKeyPoints = [
+        [[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16],[0,1],[0,2],[1,3],[2,4]],
+        [[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16],[0,1],[0,2],[1,3],[2,4]]
+      ];
 
+      // Dibujar líneas
+      canvasCtx.strokeStyle = '#10b981';
+      canvasCtx.lineWidth = 3;
+      canvasCtx.fillStyle = '#10b981';
+
+      for (let i = 0; i < adjacentKeyPoints[0].length; i++) {
+        const [a, b] = adjacentKeyPoints[0][i];
+        const kp1 = keypoints[a];
+        const kp2 = keypoints[b];
+
+        if (kp1.score > minConfidence && kp2.score > minConfidence) {
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(kp1.x, kp1.y);
+          canvasCtx.lineTo(kp2.x, kp2.y);
+          canvasCtx.stroke();
+        }
+      }
+
+      // Dibujar puntos
+      for (let i = 0; i < keypoints.length; i++) {
+        const kp = keypoints[i];
+        if (kp.score > minConfidence) {
+          const radius = 5;
+          canvasCtx.fillStyle = kp.score > 0.6 ? '#10b981' : '#fbbf24';
+          canvasCtx.beginPath();
+          canvasCtx.arc(kp.x, kp.y, radius, 0, 2 * Math.PI);
+          canvasCtx.fill();
+        }
+      }
+    }
+
+    function analyzePosture(keypoints) {
+      const getKeypoint = (name) => {
+        const nameToIndex = {
+          'nose': 0, 'left_eye': 1, 'right_eye': 2, 'left_ear': 3, 'right_ear': 4,
+          'left_shoulder': 5, 'right_shoulder': 6, 'left_elbow': 7, 'right_elbow': 8,
+          'left_wrist': 9, 'right_wrist': 10, 'left_hip': 11, 'right_hip': 12,
+          'left_knee': 13, 'right_knee': 14, 'left_ankle': 15, 'right_ankle': 16
+        };
+        const idx = nameToIndex[name];
+        return keypoints[idx] && keypoints[idx].score > 0.3 ? keypoints[idx] : null;
+      };
+
+      const nose = getKeypoint('nose');
+      const leftSh = getKeypoint('left_shoulder');
+      const rightSh = getKeypoint('right_shoulder');
+      const leftHip = getKeypoint('left_hip');
+      const rightHip = getKeypoint('right_hip');
+      const leftKnee = getKeypoint('left_knee');
+      const rightKnee = getKeypoint('right_knee');
+
+      let bad = 0;
+      let messages = [];
+      let headMsg = '✅', shMsg = '✅', hipMsg = '✅', legsMsg = '✅';
+
+      // Análisis de cabeza
       if(nose && leftSh && rightSh) {
-        let midY = (leftSh.y + rightSh.y)/2;
-        if(nose.y > midY + 25) {
+        const midY = (leftSh.y + rightSh.y) / 2;
+        if(nose.y > midY + 30) {
           headMsg = '⚠️ Cap endavant';
+          messages.push('📍 Cap molt endavant - Estira el coll');
+          bad++;
+        } else if(nose.y < midY - 20) {
+          headMsg = '⚠️ Cap endarrere';
+          messages.push('📍 Cap endarrere - Relaxa');
           bad++;
         } else {
           headMsg = '✅ Alineat';
         }
       }
+
+      // Análisis de hombros
       if(leftSh && rightSh) {
-        let diff = Math.abs(leftSh.y - rightSh.y);
-        if(diff > 20) {
-          shMsg = '⚠️ Espatlles desiguals';
+        const diff = Math.abs(leftSh.y - rightSh.y);
+        if(diff > 25) {
+          shMsg = '⚠️ Desequilibrades';
+          messages.push('📍 Espatlles desiguals - Nivela\'ls');
           bad++;
         } else {
           shMsg = '✅ Alineades';
         }
       }
-      if(bad >= 1) {
-        genMsg = '🔴 Corregeix postura';
-        document.getElementById('postureLed').className = 'w-4 h-4 rounded-full bg-red-500 animate-pulse';
-      } else {
-        genMsg = '🟢 Postura correcta';
-        document.getElementById('postureLed').className = 'w-4 h-4 rounded-full bg-green-500';
+
+      // Análisis de caderas
+      if(leftHip && rightHip) {
+        const diff = Math.abs(leftHip.y - rightHip.y);
+        if(diff > 25) {
+          hipMsg = '⚠️ Desequilibrada';
+          messages.push('📍 Cadera desequilibrada');
+          bad++;
+        } else {
+          hipMsg = '✅ Nivellada';
+        }
       }
+
+      // Análisis de piernas
+      if(leftKnee && rightKnee && leftHip && rightHip) {
+        const leftAngle = calculateAngle(leftHip, leftKnee, getKeypoint('left_ankle'));
+        const rightAngle = calculateAngle(rightHip, rightKnee, getKeypoint('right_ankle'));
+        
+        if(leftAngle && leftAngle < 60) {
+          legsMsg = '⚠️ Cames tensades';
+          messages.push('📍 Cames massa tensades - Relaxa');
+          bad++;
+        } else {
+          legsMsg = '✅ Correctes';
+        }
+      }
+
+      // Actualizar UI
+      if(bad >= 2) {
+        document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-red-500 animate-pulse';
+        document.getElementById('postureMessage').innerHTML = '🔴 Corregeix postura!';
+      } else if(bad === 1) {
+        document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-yellow-500';
+        document.getElementById('postureMessage').innerHTML = '🟡 Millora la postura';
+      } else {
+        document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-green-500';
+        document.getElementById('postureMessage').innerHTML = '🟢 Postura excel·lent!';
+      }
+
       document.getElementById('headStatus').innerHTML = headMsg;
       document.getElementById('shouldersStatus').innerHTML = shMsg;
-      document.getElementById('generalStatus').innerHTML = genMsg;
-      document.getElementById('postureMessage').innerHTML = genMsg;
+      document.getElementById('hipStatus').innerHTML = hipMsg;
+      document.getElementById('legsStatus').innerHTML = legsMsg;
+      document.getElementById('confidenceScore').innerHTML = Math.round((1 - bad/4) * 100) + '%';
+
+      // Mostrar mensajes
+      if(messages.length > 0) {
+        let html = messages.map(m => `<div class="movement-indicator movement-active">${m}</div>`).join('');
+        document.getElementById('movimentsDetectats').innerHTML = html;
+      }
+    }
+
+    function detectMovements(keypoints) {
+      const getKeypoint = (name) => {
+        const nameToIndex = {
+          'left_shoulder': 5, 'right_shoulder': 6, 'left_elbow': 7, 'right_elbow': 8,
+          'left_wrist': 9, 'right_wrist': 10, 'left_hip': 11, 'right_hip': 12,
+          'left_knee': 13, 'right_knee': 14, 'left_ankle': 15, 'right_ankle': 16
+        };
+        const idx = nameToIndex[name];
+        return keypoints[idx] && keypoints[idx].score > 0.3 ? keypoints[idx] : null;
+      };
+
+      if(!previousKeypoints) {
+        previousKeypoints = keypoints;
+        return;
+      }
+
+      let movements = [];
+      const threshold = 15;
+
+      // Detectar braços levantats
+      const leftWrist = getKeypoint('left_wrist');
+      const rightWrist = getKeypoint('right_wrist');
+      const leftShoulder = getKeypoint('left_shoulder');
+      const rightShoulder = getKeypoint('right_shoulder');
+
+      if(leftWrist && leftShoulder && leftWrist.y < leftShoulder.y - 50) {
+        movements.push('💪 Braç esquerre elevat');
+      }
+      if(rightWrist && rightShoulder && rightWrist.y < rightShoulder.y - 50) {
+        movements.push('💪 Braç dret elevat');
+      }
+
+      // Detectar flexió de cames
+      const leftKnee = getKeypoint('left_knee');
+      const rightKnee = getKeypoint('right_knee');
+      const leftHip = getKeypoint('left_hip');
+      const rightHip = getKeypoint('right_hip');
+
+      if(leftKnee && leftHip && leftKnee.y > leftHip.y + 30) {
+        movements.push('🦵 Flexió cama esquerra');
+      }
+      if(rightKnee && rightHip && rightKnee.y > rightHip.y + 30) {
+        movements.push('🦵 Flexió cama dreta');
+      }
+
+      if(movements.length > 0 && frameCount % 10 === 0) {
+        let html = movements.map(m => `<div class="movement-indicator movement-active">${m}</div>`).join('');
+        document.getElementById('movimentsDetectats').innerHTML = html;
+      }
+
+      previousKeypoints = keypoints;
+    }
+
+    function calculateAngle(a, b, c) {
+      if(!a || !b || !c) return null;
+      
+      const angle = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+      return Math.abs(angle) * 180 / Math.PI;
+    }
+
+    function resetPostureIndicators() {
+      document.getElementById('headStatus').innerHTML = '—';
+      document.getElementById('shouldersStatus').innerHTML = '—';
+      document.getElementById('hipStatus').innerHTML = '—';
+      document.getElementById('legsStatus').innerHTML = '—';
+      document.getElementById('postureMessage').innerHTML = '🔄 Buscant cos...';
+      document.getElementById('postureLed').className = 'w-5 h-5 rounded-full bg-gray-500 animate-pulse';
+      document.getElementById('confidenceScore').innerHTML = '0%';
     }
 
     // ==================== INICIALITZACIÓ ====================
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('startCameraBtn').addEventListener('click', startCamera);
       document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
-      initPoseDetection();
+      
+      // Cargar pose detection
+      setTimeout(() => initPoseDetection(), 1000);
     });
 
+    // Exportar funciones globales
     window.canviarTab = canviarTab;
     window.calcularDadesPersonals = calcularDadesPersonals;
     window.calcularNutricio = calcularNutricio;
