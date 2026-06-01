@@ -11,7 +11,6 @@
   <title>🏋️ HABITFIT PRO - Entrenador Professional</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.5.1635988162"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.5.1635988162"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
@@ -32,10 +31,9 @@
     .badge-green { background: rgba(16, 185, 129, 0.2); color: #10b981; }
     .badge-yellow { background: rgba(234, 179, 8, 0.2); color: #eab308; }
     .badge-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-    .progress-bar { width: 100%; height: 8px; background: rgba(30, 41, 59, 0.8); border-radius: 10px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #06b6d4); transition: width 0.3s; }
     @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .animate-in { animation: slideIn 0.3s ease-out; }
+    canvas { transform: scaleX(-1); max-width: 100%; }
   </style>
 </head>
 <body class="p-4 md:p-6">
@@ -54,12 +52,12 @@
   </div>
 
   <!-- TABS -->
-  <div class="flex gap-2 mb-6 overflow-x-auto pb-2 sticky top-0 bg-black/50 backdrop-blur p-2 rounded-xl">
+  <div class="flex gap-2 mb-6 overflow-x-auto pb-2 sticky top-0 bg-black/50 backdrop-blur p-2 rounded-xl z-10">
     <button onclick="switchTab('perfil')" id="tabPerfil" class="tab-active px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">👤 PERFIL</button>
     <button onclick="switchTab('entrenament')" id="tabEntrenament" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">🏋️ ENTRENAMENT</button>
     <button onclick="switchTab('nutrició')" id="tabNutricio" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">🍎 NUTRICIÓ</button>
     <button onclick="switchTab('seguiment')" id="tabSeguiment" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">📊 SEGUIMENT</button>
-    <button onclick="switchTab('camara')" id="tabCamara" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">📷 CÀMERA</button>
+    <button onclick="switchTab('camara')" id="tabCamara" class="tab-inactive px-5 py-3 rounded-xl font-bold transition whitespace-nowrap">📷 CÀMERA SLS</button>
   </div>
 
   <!-- PANEL PERFIL -->
@@ -128,7 +126,11 @@
     <!-- SECCIÓ 3: LESIONS I LIMITACIONS -->
     <div class="glass rounded-3xl p-6 mb-6">
       <h2 class="text-2xl font-bold text-emerald-400 mb-4">🩺 Lesions i Limitacions</h2>
-      <div class="grid md:grid-cols-2 gap-4">
+      <label class="flex items-center gap-2 cursor-pointer mb-4 p-3 bg-emerald-900/30 rounded-lg">
+        <input type="checkbox" id="lesSinLesiones" class="w-5 h-5 cursor-pointer" />
+        <span class="font-bold text-emerald-300">✅ No tinc cap lesió (sense limitacions)</span>
+      </label>
+      <div class="grid md:grid-cols-2 gap-4" id="lesionesCheckboxes">
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" id="lesEspatlla" class="w-5 h-5 cursor-pointer" />
           <span>Problemes d'espatlla</span>
@@ -225,7 +227,6 @@
         <div>
           <label class="text-sm text-slate-300 mb-2 block">Preferència de tipus d'exercici</label>
           <select id="tipoExercici" class="input-field">
-            <option>Selecciona preferència</option>
             <option value="fuerza">Força i potència</option>
             <option value="hipertrofia">Hipertròfia muscular</option>
             <option value="cardio">Cardiovascular</option>
@@ -382,45 +383,49 @@
     </div>
   </div>
 
-  <!-- PANEL CÀMERA -->
+  <!-- PANEL CÀMERA SLS -->
   <div id="panelCamara" class="hidden animate-in">
     <div class="glass rounded-3xl p-6">
-      <h2 class="text-2xl font-bold text-emerald-400 mb-4">📷 Anàlisis de Postura (IA)</h2>
+      <h2 class="text-2xl font-bold text-emerald-400 mb-4">📷 Anàlisis de Postura SLS (Single Leg Stance)</h2>
+      <p class="text-slate-300 mb-4">Tecnologia IA per a detecció de postura en equilibri</p>
       
       <div class="grid lg:grid-cols-2 gap-6">
         <div>
-          <video id="video" width="640" height="480" autoplay playsinline muted class="w-full rounded-xl border-2 border-emerald-500/50 mb-4"></video>
+          <div class="relative">
+            <video id="video" width="640" height="480" autoplay playsinline muted class="w-full rounded-xl border-2 border-emerald-500/50 mb-4 hidden"></video>
+            <canvas id="canvas" width="640" height="480" class="w-full rounded-xl border-2 border-emerald-500/50 mb-4"></canvas>
+          </div>
           <div class="flex gap-2">
-            <button onclick="startCamera()" class="flex-1 btn-premium p-3 rounded-xl font-bold">🎥 INICIAR</button>
+            <button onclick="startCamera()" class="flex-1 btn-premium p-3 rounded-xl font-bold">🎥 INICIAR SLS</button>
             <button onclick="stopCamera()" class="flex-1 btn-secondary p-3 rounded-xl font-bold">⏹️ ATURAR</button>
           </div>
         </div>
 
         <div class="bg-slate-800/60 rounded-2xl p-5">
-          <h3 class="text-xl font-bold text-emerald-400 mb-4">🩺 Análisis</h3>
+          <h3 class="text-xl font-bold text-emerald-400 mb-4">🩺 Anàlisis SLS</h3>
           <div class="space-y-3">
             <div class="p-3 bg-slate-700/50 rounded-lg">
               <div class="flex justify-between">
-                <span class="text-sm">🧠 Cap</span>
-                <span id="headStatus" class="font-bold text-amber-300">—</span>
+                <span class="text-sm">⚖️ Equilibri</span>
+                <span id="balanceStatus" class="font-bold text-amber-300">—</span>
               </div>
             </div>
             <div class="p-3 bg-slate-700/50 rounded-lg">
               <div class="flex justify-between">
-                <span class="text-sm">🦾 Espatlles</span>
-                <span id="shoulderStatus" class="font-bold text-amber-300">—</span>
+                <span class="text-sm">🦵 Cama Activa</span>
+                <span id="activeLegStatus" class="font-bold text-amber-300">—</span>
               </div>
             </div>
             <div class="p-3 bg-slate-700/50 rounded-lg">
               <div class="flex justify-between">
-                <span class="text-sm">📐 Cadera</span>
-                <span id="hipStatus" class="font-bold text-amber-300">—</span>
+                <span class="text-sm">📐 Alineament</span>
+                <span id="alignmentStatus" class="font-bold text-amber-300">—</span>
               </div>
             </div>
             <div class="p-3 bg-slate-700/50 rounded-lg">
               <div class="flex justify-between">
-                <span class="text-sm">🦵 Cames</span>
-                <span id="legStatus" class="font-bold text-amber-300">—</span>
+                <span class="text-sm">⏱️ Temps</span>
+                <span id="timeStatus" class="font-bold text-cyan-300">0s</span>
               </div>
             </div>
             <div class="p-3 bg-emerald-900/30 rounded-lg">
@@ -434,26 +439,38 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.5.1635988162"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.5.1635988162"></script>
 
 <script>
   let userProfile = {};
   let historialSeguimiento = JSON.parse(localStorage.getItem('habitfit_historial')) || [];
   let isDetecting = false;
+  let poseDetector = null;
+  let startTime = 0;
 
   function switchTab(tab) {
+    const panelId = 'panel' + tab.charAt(0).toUpperCase() + tab.slice(1);
+    const tabId = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+    
     document.querySelectorAll('[id^="panel"]').forEach(p => p.classList.add('hidden'));
     document.querySelectorAll('[id^="tab"]').forEach(t => {
       t.classList.remove('tab-active');
       t.classList.add('tab-inactive');
     });
 
-    document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
-    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('tab-active');
+    document.getElementById(panelId).classList.remove('hidden');
+    document.getElementById(tabId).classList.add('tab-active');
 
     if(tab === 'camara') setTimeout(() => initCamera(), 500);
   }
+
+  document.getElementById('lesSinLesiones').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('#lesionesCheckboxes input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+      cb.checked = false;
+      cb.disabled = this.checked;
+    });
+  });
 
   function calcularPerfil() {
     const peso = parseFloat(document.getElementById('peso').value);
@@ -466,7 +483,6 @@
       return;
     }
 
-    // Calcular TMB (Mifflin-St Jeor)
     let tmb = (genero === 'Masculí')
       ? (88.362 + (13.397 * peso) + (4.799 * altura) - (5.677 * edad))
       : (447.593 + (9.247 * peso) + (3.098 * altura) - (4.330 * edad));
@@ -689,13 +705,52 @@
       });
       video.srcObject = stream;
     } catch(err) {
-      alert('❌ Permite acceso a la cámara');
+      alert('❌ Permet acceso a la cámara');
     }
+  }
+
+  function calculateBalance(landmarks) {
+    if (!landmarks) return { balance: 0, activeLeg: 'Detección...', alignment: 'Detección...' };
+
+    const leftHip = landmarks[23];
+    const rightHip = landmarks[24];
+    const leftAnkle = landmarks[27];
+    const rightAnkle = landmarks[28];
+    const nose = landmarks[0];
+
+    // Detectar cuál es la pierna activa (la más elevada)
+    const leftLegWeight = leftHip.y + leftAnkle.y;
+    const rightLegWeight = rightHip.y + rightAnkle.y;
+    const activeLeg = leftLegWeight < rightLegWeight ? '🦵 Izquierda' : '🦵 Derecha';
+
+    // Calcular estabilidad del equilibrio
+    const hipMidpoint = (leftHip.x + rightHip.x) / 2;
+    const noseMidpoint = nose.x;
+    const balance = Math.abs(hipMidpoint - noseMidpoint) < 0.05 ? 100 : Math.max(0, 100 - (Math.abs(hipMidpoint - noseMidpoint) * 500));
+
+    // Verificar alineamiento (caderas y hombros)
+    const leftShoulder = landmarks[11];
+    const rightShoulder = landmarks[12];
+    const shoulderAlignment = Math.abs(leftShoulder.y - rightShoulder.y);
+    const hipAlignment = Math.abs(leftHip.y - rightHip.y);
+    
+    let alignment = '✅ Perfecto';
+    if (shoulderAlignment > 0.1 || hipAlignment > 0.1) alignment = '⚠️ Alineamiento pobre';
+    else if (shoulderAlignment > 0.05 || hipAlignment > 0.05) alignment = '⚠️ Mejorable';
+
+    return {
+      balance: Math.round(balance),
+      activeLeg,
+      alignment
+    };
   }
 
   async function startCamera() {
     isDetecting = true;
+    startTime = Date.now();
     const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
     
     if(!video.srcObject) await initCamera();
 
@@ -706,59 +761,79 @@
     pose.setOptions({
       modelComplexity: 1,
       smoothLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7
     });
 
+    // Actualizar tiempo cada segundo
+    const timerInterval = setInterval(() => {
+      if(!isDetecting) {
+        clearInterval(timerInterval);
+        return;
+      }
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      document.getElementById('timeStatus').innerText = elapsed + 's';
+    }, 1000);
+
     pose.onResults((results) => {
-      if(!results.poseLandmarks) return;
-      const landmarks = results.poseLandmarks;
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.translate(-canvas.width, 0);
 
-      const nose = landmarks[0];
-      const leftSh = landmarks[11];
-      const rightSh = landmarks[12];
-      const leftHip = landmarks[23];
-      const rightHip = landmarks[24];
+      if(results.image) {
+        ctx.drawImage(results.image, 0, 0);
+      }
 
-      let issues = [];
+      if(results.poseLandmarks && results.poseLandmarks.length > 0) {
+        const balanceData = calculateBalance(results.poseLandmarks);
+        
+        document.getElementById('balanceStatus').innerHTML = balanceData.balance + '%';
+        document.getElementById('activeLegStatus').innerHTML = balanceData.activeLeg;
+        document.getElementById('alignmentStatus').innerHTML = balanceData.alignment;
 
-      if(nose && leftSh && rightSh) {
-        const midY = (leftSh.y + rightSh.y) / 2;
-        if(nose.y > midY + 0.15) {
-          document.getElementById('headStatus').innerHTML = '⚠️ Cap endavant';
-          issues.push('cap');
+        // Dibujar esqueleto
+        const landmarks = results.poseLandmarks;
+        
+        // Dibujar puntos clave
+        const pointsToHighlight = [0, 11, 12, 23, 24, 25, 26, 27, 28]; // Cabeza, hombros, caderas, tobillos
+        pointsToHighlight.forEach(idx => {
+          const point = landmarks[idx];
+          ctx.fillStyle = '#10b981';
+          ctx.beginPath();
+          ctx.arc(point.x * canvas.width, point.y * canvas.height, 8, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+
+        // Dibujar conexiones
+        const connections = [
+          [11, 12], // Hombros
+          [11, 23], [12, 24], // Brazos a caderas
+          [23, 24], // Caderas
+          [23, 25], [24, 26], // Caderas a rodillas
+          [25, 27], [26, 28] // Rodillas a tobillos
+        ];
+
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 3;
+        connections.forEach(([start, end]) => {
+          const p1 = landmarks[start];
+          const p2 = landmarks[end];
+          ctx.beginPath();
+          ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+          ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+          ctx.stroke();
+        });
+
+        if(balanceData.balance < 50) {
+          document.getElementById('cameraStatus').innerHTML = '🔴 Inestable - Mejora tu postura';
+        } else if(balanceData.balance < 80) {
+          document.getElementById('cameraStatus').innerHTML = '🟡 Buen equilibrio - Mantén la posición';
         } else {
-          document.getElementById('headStatus').innerHTML = '✅ Bé';
+          document.getElementById('cameraStatus').innerHTML = '🟢 Excelente equilibrio SLS';
         }
       }
 
-      if(leftSh && rightSh) {
-        const diff = Math.abs(leftSh.y - rightSh.y);
-        if(diff > 0.05) {
-          document.getElementById('shoulderStatus').innerHTML = '⚠️ Desiguals';
-          issues.push('espatlles');
-        } else {
-          document.getElementById('shoulderStatus').innerHTML = '✅ Alineades';
-        }
-      }
-
-      if(leftHip && rightHip) {
-        const diff = Math.abs(leftHip.y - rightHip.y);
-        if(diff > 0.05) {
-          document.getElementById('hipStatus').innerHTML = '⚠️ Desequilibrada';
-          issues.push('cadera');
-        } else {
-          document.getElementById('hipStatus').innerHTML = '✅ Nivellada';
-        }
-      }
-
-      document.getElementById('legStatus').innerHTML = '✅ Correctes';
-
-      if(issues.length === 0) {
-        document.getElementById('cameraStatus').innerHTML = '🟢 Postura perfecta!';
-      } else {
-        document.getElementById('cameraStatus').innerHTML = `🟡 Corregeix: ${issues.join(', ')}`;
-      }
+      ctx.restore();
     });
 
     const camera = new Camera(video, {
@@ -785,7 +860,6 @@
     return ids.filter(id => document.getElementById(id)?.checked).map(id => id.replace('obj', '').replace('les', '').replace('equip', ''));
   }
 
-  // Cargar perfil guardado
   window.addEventListener('load', () => {
     const saved = localStorage.getItem('habitfit_profile');
     if(saved) {
