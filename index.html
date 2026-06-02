@@ -780,8 +780,20 @@
       ctx.scale(-1, 1);
       ctx.translate(-canvas.width, 0);
 
-      if(results.image) {
-        ctx.drawImage(results.image, 0, 0);
+      // 1. Fondo Oscuro SLS (Oculta la cámara real)
+      ctx.fillStyle = '#051105'; 
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. Rejilla de puntos infrarrojos SLS
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.08)';
+      ctx.lineWidth = 1;
+      const gridSize = 25;
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        for (let y = 0; y < canvas.height; y += gridSize) {
+          ctx.beginPath();
+          ctx.arc(x, y, 1, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
       }
 
       if(results.poseLandmarks && results.poseLandmarks.length > 0) {
@@ -791,46 +803,62 @@
         document.getElementById('activeLegStatus').innerHTML = balanceData.activeLeg;
         document.getElementById('alignmentStatus').innerHTML = balanceData.alignment;
 
-        // Dibujar esqueleto
         const landmarks = results.poseLandmarks;
         
-        // Dibujar puntos clave
-        const pointsToHighlight = [0, 11, 12, 23, 24, 25, 26, 27, 28]; // Cabeza, hombros, caderas, tobillos
-        pointsToHighlight.forEach(idx => {
-          const point = landmarks[idx];
-          ctx.fillStyle = '#10b981';
-          ctx.beginPath();
-          ctx.arc(point.x * canvas.width, point.y * canvas.height, 8, 0, 2 * Math.PI);
-          ctx.fill();
-        });
-
-        // Dibujar conexiones
+        // 3. Conexiones completas del cuerpo humano (Corregido)
         const connections = [
           [11, 12], // Hombros
-          [11, 23], [12, 24], // Brazos a caderas
+          [11, 23], [12, 24], // Torso
           [23, 24], // Caderas
-          [23, 25], [24, 26], // Caderas a rodillas
-          [25, 27], [26, 28] // Rodillas a tobillos
+          [23, 25], [24, 26], // Muslos
+          [25, 27], [26, 28], // Piernas
+          [11, 13], [12, 14], // Brazos
+          [13, 15], [14, 16], // Antebrazos
+          [0, 11],  [0, 12]   // Cabeza a hombros
         ];
 
-        ctx.strokeStyle = '#06b6d4';
-        ctx.lineWidth = 3;
+        // Estilo de líneas SLS (Verde Neón Brillante)
+        ctx.strokeStyle = '#00ff33';
+        ctx.lineWidth = 5;
+        ctx.shadowColor = '#00ff33';
+        ctx.shadowBlur = 12; 
+
         connections.forEach(([start, end]) => {
           const p1 = landmarks[start];
           const p2 = landmarks[end];
-          ctx.beginPath();
-          ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
-          ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
-          ctx.stroke();
+          if (p1 && p2 && p1.visibility > 0.5 && p2.visibility > 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+            ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+            ctx.stroke();
+          }
+        });
+
+        // 4. Puntos de las articulaciones (Nodos de rastreo)
+        ctx.shadowBlur = 0; 
+        landmarks.forEach((point, idx) => {
+          // Filtramos para mostrar solo articulaciones principales
+          const mainJoints = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+          if (mainJoints.includes(idx) && point.visibility > 0.5) {
+            ctx.fillStyle = '#ffffff'; 
+            ctx.strokeStyle = '#00ff33'; 
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(point.x * canvas.width, point.y * canvas.height, 5, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+          }
         });
 
         if(balanceData.balance < 50) {
-          document.getElementById('cameraStatus').innerHTML = '🔴 Inestable - Mejora tu postura';
+          document.getElementById('cameraStatus').innerHTML = '🔴 SLS: Entidad Inestable';
         } else if(balanceData.balance < 80) {
-          document.getElementById('cameraStatus').innerHTML = '🟡 Buen equilibrio - Mantén la posición';
+          document.getElementById('cameraStatus').innerHTML = '🟡 SLS: Rastreo Fijado';
         } else {
-          document.getElementById('cameraStatus').innerHTML = '🟢 Excelente equilibrio SLS';
+          document.getElementById('cameraStatus').innerHTML = '🟢 SLS: Cuerpo Detectado';
         }
+      } else {
+        document.getElementById('cameraStatus').innerHTML = '📡 SLS: Buscando entidades...';
       }
 
       ctx.restore();
