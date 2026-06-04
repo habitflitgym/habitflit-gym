@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#3b82f6" />
+  <meta name="description" content="TaskFlow - Aplicación de tareas con almacenamiento local" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TaskFlow" />
+  <title>📝 TaskFlow - Tu Gestor de Tareas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+    body { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      color: white; 
+      min-height: 100vh;
+    }
+    .glass { 
+      background: rgba(255, 255, 255, 0.1); 
+      backdrop-filter: blur(16px); 
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .btn-primary { 
+      background: linear-gradient(135deg, #667eea, #764ba2); 
+      transition: all 0.3s; 
+      cursor: pointer; 
+    }
+    .btn-primary:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+    .btn-secondary { 
+      background: rgba(255, 255, 255, 0.2); 
+      transition: all 0.3s; 
+      cursor: pointer; 
+    }
+    .btn-secondary:hover { 
+      background: rgba(255, 255, 255, 0.3); 
+    }
+    .btn-danger { 
+      background: rgba(239, 68, 68, 0.8); 
+      transition: all 0.3s; 
+      cursor: pointer; 
+    }
+    .btn-danger:hover { 
+      background: rgba(239, 68, 68, 1); 
+    }
+    .input-field { 
+      width: 100%; 
+      padding: 12px; 
+      border-radius: 8px; 
+      background: rgba(255, 255, 255, 0.15); 
+      border: 1px solid rgba(255, 255, 255, 0.3); 
+      color: white; 
+    }
+    .input-field::placeholder { 
+      color: rgba(255, 255, 255, 0.7); 
+    }
+    .input-field:focus { 
+      outline: none; 
+      background: rgba(255, 255, 255, 0.25); 
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+    .task-item { 
+      background: rgba(255, 255, 255, 0.1); 
+      border-left: 4px solid #667eea;
+      transition: all 0.3s;
+    }
+    .task-item:hover { 
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .task-item.completed { 
+      opacity: 0.7; 
+      border-left-color: #10b981;
+    }
+    .task-item.completed .task-text { 
+      text-decoration: line-through;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .badge { 
+      display: inline-block; 
+      padding: 4px 12px; 
+      border-radius: 20px; 
+      font-size: 12px; 
+      font-weight: bold; 
+    }
+    .badge-high { 
+      background: rgba(239, 68, 68, 0.3); 
+      color: #fca5a5; 
+    }
+    .badge-medium { 
+      background: rgba(245, 158, 11, 0.3); 
+      color: #fcd34d; 
+    }
+    .badge-low { 
+      background: rgba(34, 197, 94, 0.3); 
+      color: #bbf7d0; 
+    }
+    .badge-date { 
+      background: rgba(59, 130, 246, 0.3); 
+      color: #93c5fd; 
+    }
+    @keyframes slideIn { 
+      from { opacity: 0; transform: translateY(10px); } 
+      to { opacity: 1; transform: translateY(0); } 
+    }
+    .animate-in { 
+      animation: slideIn 0.3s ease-out; 
+    }
+    .checkbox-custom {
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .checkbox-custom:checked {
+      background: #10b981;
+      border-color: #10b981;
+    }
+    .checkbox-custom:checked::after {
+      content: '✓';
+      display: block;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+    }
+    .stats-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .empty-state svg {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 20px;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-6">
+
+<div class="max-w-4xl mx-auto">
+  <!-- HEADER -->
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center gap-3 glass rounded-full px-8 py-4 shadow-lg mb-4">
+      <span class="text-5xl">📝</span>
+      <div>
+        <h1 class="text-4xl font-bold">TaskFlow</h1>
+        <p class="text-sm text-gray-200">Tu gestor de tareas personal</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="stats-card">
+      <p class="text-sm text-gray-300 mb-2">📊 Total</p>
+      <p class="text-3xl font-bold" id="totalStats">0</p>
+    </div>
+    <div class="stats-card">
+      <p class="text-sm text-gray-300 mb-2">✅ Completadas</p>
+      <p class="text-3xl font-bold text-green-300" id="completedStats">0</p>
+    </div>
+    <div class="stats-card">
+      <p class="text-sm text-gray-300 mb-2">⏳ Pendientes</p>
+      <p class="text-3xl font-bold text-yellow-300" id="pendingStats">0</p>
+    </div>
+  </div>
+
+  <!-- FILTERS & SORT -->
+  <div class="glass rounded-2xl p-6 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <button onclick="filterTasks('all')" id="filterAll" class="btn-primary p-2 rounded-lg text-sm font-bold transition">
+        📋 Todas
+      </button>
+      <button onclick="filterTasks('pending')" id="filterPending" class="btn-secondary p-2 rounded-lg text-sm font-bold transition">
+        ⏳ Pendientes
+      </button>
+      <button onclick="filterTasks('completed')" id="filterCompleted" class="btn-secondary p-2 rounded-lg text-sm font-bold transition">
+        ✅ Completadas
+      </button>
+      <button onclick="sortTasks()" id="sortBtn" class="btn-secondary p-2 rounded-lg text-sm font-bold transition">
+        🔀 Ordenar
+      </button>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-3">
+      <select id="priorityFilter" onchange="filterByPriority()" class="input-field text-sm">
+        <option value="">🎯 Todas las prioridades</option>
+        <option value="high">🔴 Alta</option>
+        <option value="medium">🟡 Media</option>
+        <option value="low">🟢 Baja</option>
+      </select>
+
+      <input type="date" id="dateFilter" onchange="filterByDate()" class="input-field text-sm">
+
+      <button onclick="clearFilters()" class="btn-secondary p-2 rounded-lg text-sm font-bold">
+        🔄 Limpiar filtros
+      </button>
+    </div>
+  </div>
+
+  <!-- ADD TASK -->
+  <div class="glass rounded-2xl p-6 mb-6">
+    <h2 class="text-xl font-bold mb-4">➕ Nueva Tarea</h2>
+    
+    <div class="space-y-3 mb-4">
+      <input 
+        type="text" 
+        id="taskInput" 
+        placeholder="¿Qué necesitas hacer?" 
+        class="input-field" 
+        onkeypress="if(event.key==='Enter') addTask()"
+      />
+      
+      <div class="grid md:grid-cols-3 gap-3">
+        <input 
+          type="date" 
+          id="taskDate" 
+          class="input-field"
+        />
+        
+        <select id="taskPriority" class="input-field">
+          <option value="low">🟢 Baja Prioridad</option>
+          <option value="medium" selected>🟡 Media Prioridad</option>
+          <option value="high">🔴 Alta Prioridad</option>
+        </select>
+
+        <select id="taskCategory" class="input-field">
+          <option value="personal">👤 Personal</option>
+          <option value="work">💼 Trabajo</option>
+          <option value="health">🏥 Salud</option>
+          <option value="shopping">🛒 Compras</option>
+          <option value="other">📌 Otro</option>
+        </select>
+      </div>
+
+      <textarea 
+        id="taskDesc" 
+        placeholder="Descripción (opcional)" 
+        class="input-field" 
+        rows="2"
+      ></textarea>
+    </div>
+
+    <button onclick="addTask()" class="btn-primary w-full p-3 rounded-lg font-bold text-lg">
+      ✨ Agregar Tarea
+    </button>
+  </div>
+
+  <!-- TASKS LIST -->
+  <div id="tasksContainer">
+    <div class="empty-state">
+      <p class="text-lg text-gray-300">📭 No hay tareas. ¡Crea una para comenzar!</p>
+    </div>
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="glass rounded-2xl p-6 mt-8">
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <button onclick="clearCompleted()" class="btn-secondary p-3 rounded-lg font-bold text-sm">
+        🗑️ Limpiar completadas
+      </button>
+      <button onclick="exportTasks()" class="btn-secondary p-3 rounded-lg font-bold text-sm">
+        📥 Exportar
+      </button>
+      <button onclick="importTasks()" class="btn-secondary p-3 rounded-lg font-bold text-sm">
+        📤 Importar
+      </button>
+      <button onclick="resetAll()" class="btn-danger p-3 rounded-lg font-bold text-sm">
+        🔄 Resetear todo
+      </button>
+    </div>
+  </div>
+
+  <!-- HIDDEN FILE INPUT -->
+  <input type="file" id="fileInput" accept=".json" style="display:none;" onchange="handleFileImport(event)">
+</div>
+
+<script>
+  // Variables globales
+  let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+  let currentFilter = 'all';
+  let currentPriorityFilter = '';
+  let currentDateFilter = '';
+  let sortOrder = 'date'; // 'date', 'priority', 'name'
+
+  // Inicializar
+  document.addEventListener('DOMContentLoaded', () => {
+    setTodayDate();
+    renderTasks();
+    updateStats();
+  });
+
+  // Establecer fecha de hoy por defecto
+  function setTodayDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('taskDate').value = today;
+  }
+
+  // Agregar tarea
+  function addTask() {
+    const input = document.getElementById('taskInput');
+    const dateInput = document.getElementById('taskDate');
+    const priorityInput = document.getElementById('taskPriority');
+    const categoryInput = document.getElementById('taskCategory');
+    const descInput = document.getElementById('taskDesc');
+
+    if (!input.value.trim()) {
+      alert('⚠️ Por favor, escribe una tarea');
+      return;
+    }
+
+    const task = {
+      id: Date.now(),
+      text: input.value.trim(),
+      desc: descInput.value.trim(),
+      date: dateInput.value,
+      priority: priorityInput.value,
+      category: categoryInput.value,
+      completed: false,
+      createdAt: new Date().toISOString()
+    };
+
+    tasks.unshift(task);
+    saveTasks();
+    renderTasks();
+    updateStats();
+
+    // Limpiar formulario
+    input.value = '';
+    descInput.value = '';
+    setTodayDate();
+    priorityInput.value = 'medium';
+    categoryInput.value = 'personal';
+
+    input.focus();
+  }
+
+  // Alternar completación
+  function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.completed = !task.completed;
+      saveTasks();
+      renderTasks();
+      updateStats();
+    }
+  }
+
+  // Eliminar tarea
+  function deleteTask(id) {
+    if (confirm('¿Eliminar esta tarea?')) {
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasks();
+      renderTasks();
+      updateStats();
+    }
+  }
+
+  // Editar tarea
+  function editTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const newText = prompt('Editar tarea:', task.text);
+    if (newText && newText.trim()) {
+      task.text = newText.trim();
+      saveTasks();
+      renderTasks();
+    }
+  }
+
+  // Filtrar tareas
+  function filterTasks(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('[id^="filter"]').forEach(btn => btn.classList.remove('btn-primary'));
+    document.querySelectorAll('[id^="filter"]').forEach(btn => btn.classList.add('btn-secondary'));
+    document.getElementById('filter' + filter.charAt(0).toUpperCase() + filter.slice(1)).classList.remove('btn-secondary');
+    document.getElementById('filter' + filter.charAt(0).toUpperCase() + filter.slice(1)).classList.add('btn-primary');
+    renderTasks();
+  }
+
+  // Filtrar por prioridad
+  function filterByPriority() {
+    currentPriorityFilter = document.getElementById('priorityFilter').value;
+    renderTasks();
+  }
+
+  // Filtrar por fecha
+  function filterByDate() {
+    currentDateFilter = document.getElementById('dateFilter').value;
+    renderTasks();
+  }
+
+  // Limpiar filtros
+  function clearFilters() {
+    currentFilter = 'all';
+    currentPriorityFilter = '';
+    currentDateFilter = '';
+    document.getElementById('priorityFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    filterTasks('all');
+  }
+
+  // Ordenar tareas
+  function sortTasks() {
+    if (sortOrder === 'date') sortOrder = 'priority';
+    else if (sortOrder === 'priority') sortOrder = 'name';
+    else sortOrder = 'date';
+
+    const sortIcon = { 'date': '📅', 'priority': '🎯', 'name': '🔤' };
+    document.getElementById('sortBtn').textContent = sortIcon[sortOrder] + ' Ordenar';
+    renderTasks();
+  }
+
+  // Renderizar tareas
+  function renderTasks() {
+    let filtered = tasks.filter(task => {
+      if (currentFilter === 'pending' && task.completed) return false;
+      if (currentFilter === 'completed' && !task.completed) return false;
+      if (currentPriorityFilter && task.priority !== currentPriorityFilter) return false;
+      if (currentDateFilter && task.date !== currentDateFilter) return false;
+      return true;
+    });
+
+    // Ordenar
+    if (sortOrder === 'priority') {
+      const priorityOrder = { 'high': 1, 'medium': 2, 'low': 3 };
+      filtered.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+    } else if (sortOrder === 'name') {
+      filtered.sort((a, b) => a.text.localeCompare(b.text));
+    } else {
+      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+
+    const container = document.getElementById('tasksContainer');
+    
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p class="text-lg text-gray-300">📭 No hay tareas</p></div>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(task => `
+      <div class="task-item glass rounded-xl p-4 mb-3 animate-in ${task.completed ? 'completed' : ''}">
+        <div class="flex items-start gap-3">
+          <input 
+            type="checkbox" 
+            class="checkbox-custom mt-1" 
+            ${task.completed ? 'checked' : ''} 
+            onchange="toggleTask(${task.id})"
+          />
+          <div class="flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="task-text text-lg font-semibold flex-1">${escapeHtml(task.text)}</p>
+              <span class="badge badge-${task.priority}">${getPriorityLabel(task.priority)}</span>
+              <span class="badge badge-date">${getCategoryEmoji(task.category)} ${task.category}</span>
+            </div>
+            ${task.date ? `<p class="text-sm text-gray-300 mt-1">📅 ${formatDate(task.date)}</p>` : ''}
+            ${task.desc ? `<p class="text-sm text-gray-300 mt-2">💬 ${escapeHtml(task.desc)}</p>` : ''}
+          </div>
+          <div class="flex gap-2 ml-2">
+            <button onclick="editTask(${task.id})" class="btn-secondary p-2 rounded-lg text-sm">✏️</button>
+            <button onclick="deleteTask(${task.id})" class="btn-danger p-2 rounded-lg text-sm">🗑️</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Actualizar estadísticas
+  function updateStats() {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.completed).length;
+    const pending = total - completed;
+
+    document.getElementById('totalStats').textContent = total;
+    document.getElementById('completedStats').textContent = completed;
+    document.getElementById('pendingStats').textContent = pending;
+  }
+
+  // Limpiar completadas
+  function clearCompleted() {
+    if (confirm('¿Eliminar todas las tareas completadas?')) {
+      tasks = tasks.filter(t => !t.completed);
+      saveTasks();
+      renderTasks();
+      updateStats();
+    }
+  }
+
+  // Exportar tareas
+  function exportTasks() {
+    const dataStr = JSON.stringify(tasks, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tareas_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Importar tareas
+  function importTasks() {
+    document.getElementById('fileInput').click();
+  }
+
+  function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (Array.isArray(imported)) {
+          tasks = [...tasks, ...imported];
+          saveTasks();
+          renderTasks();
+          updateStats();
+          alert('✅ Tareas importadas correctamente');
+        }
+      } catch (err) {
+        alert('❌ Error al importar archivo');
+      }
+    };
+    reader.readAsText(file);
+    document.getElementById('fileInput').value = '';
+  }
+
+  // Resetear todo
+  function resetAll() {
+    if (confirm('⚠️ ¿Eliminar TODAS las tareas? Esta acción no se puede deshacer.')) {
+      tasks = [];
+      saveTasks();
+      renderTasks();
+      updateStats();
+    }
+  }
+
+  // Guardar en localStorage
+  function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }
+
+  // Utilidades
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function formatDate(dateStr) {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  function getPriorityLabel(priority) {
+    const labels = { 'high': '🔴 Alta', 'medium': '🟡 Media', 'low': '🟢 Baja' };
+    return labels[priority] || priority;
+  }
+
+  function getCategoryEmoji(category) {
+    const emojis = { 'personal': '👤', 'work': '💼', 'health': '🏥', 'shopping': '🛒', 'other': '📌' };
+    return emojis[category] || '📌';
+  }
+</script>
+
+</body>
+</html>
